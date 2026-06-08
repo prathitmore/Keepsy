@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.example.model.*
 import com.example.ui.theme.*
@@ -2118,6 +2119,15 @@ fun AddEditItemScreen(
         }
     }
 
+    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && tempCameraUri != null) {
+            photoUri = tempCameraUri
+        }
+    }
+
     // Load active edit item properties
     LaunchedEffect(itemId) {
         if (itemId != null && itemId != 0L) {
@@ -2169,19 +2179,19 @@ fun AddEditItemScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(130.dp)
+                    .wrapContentHeight()
             ) {
                 Row(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(12.dp),
+                        .fillMaxWidth()
+                        .padding(14.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
                             .size(100.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .background(Color.Gray.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
@@ -2193,22 +2203,63 @@ fun AddEditItemScreen(
                     }
 
                     Column(
+                        modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(text = "Belongings Photo", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         Text(text = "Highly recommended for fast search.", fontSize = 11.sp, color = Color.Gray)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Button(
                                 onClick = { galleryLauncher.launch("image/*") },
                                 colors = ButtonDefaults.buttonColors(containerColor = HighlightTeal),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                                modifier = Modifier.height(32.dp)
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .heightIn(min = 36.dp)
                             ) {
-                                Text("Select Photo", fontSize = 11.sp)
+                                Text("Select Photo", fontSize = 12.sp, maxLines = 1)
                             }
-                            if (photoUri != null) {
-                                TextButton(onClick = { photoUri = null }) { Text("Clear", color = MutedRedDanger, fontSize = 11.sp) }
+                            Button(
+                                onClick = {
+                                    try {
+                                        val tempFile = File(context.cacheDir, "cap_${System.currentTimeMillis()}.jpg")
+                                        val authority = "${context.packageName}.fileprovider"
+                                        val uri = FileProvider.getUriForFile(context, authority, tempFile)
+                                        tempCameraUri = uri
+                                        cameraLauncher.launch(uri)
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                        Toast.makeText(context, "Cannot open camera: ${e.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = HighlightTeal),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .heightIn(min = 36.dp)
+                            ) {
+                                Text("Click Photo", fontSize = 12.sp, maxLines = 1)
+                            }
+                        }
+                        if (photoUri != null) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            TextButton(
+                                onClick = { photoUri = null },
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(imageVector = Icons.Default.Delete, contentDescription = "", tint = MutedRedDanger, modifier = Modifier.size(14.dp))
+                                    Text("Clear Photo", color = MutedRedDanger, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
@@ -2400,6 +2451,15 @@ fun AddEditSpaceScreen(
         }
     }
 
+    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && tempCameraUri != null) {
+            photoUri = tempCameraUri
+        }
+    }
+
     LaunchedEffect(spaceId) {
         if (spaceId != null && spaceId != 0L) {
             val space = viewModel.spaces.first().find { it.spaceId == spaceId }
@@ -2438,19 +2498,19 @@ fun AddEditSpaceScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(130.dp)
+                    .wrapContentHeight()
             ) {
                 Row(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(12.dp),
+                        .fillMaxWidth()
+                        .padding(14.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
                             .size(100.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .background(Color.Gray.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
@@ -2461,20 +2521,64 @@ fun AddEditSpaceScreen(
                         }
                     }
 
-                    Column(verticalArrangement = Arrangement.Center) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.Center
+                    ) {
                         Text(text = "Space Container Photo", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         Text(text = "Helps visually map drawers / shelves.", fontSize = 11.sp, color = Color.Gray)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Button(
                                 onClick = { galleryLauncher.launch("image/*") },
                                 colors = ButtonDefaults.buttonColors(containerColor = HighlightTeal),
-                                modifier = Modifier.height(32.dp)
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .heightIn(min = 36.dp)
                             ) {
-                                Text("Select Photo", fontSize = 11.sp)
+                                Text("Select Photo", fontSize = 12.sp, maxLines = 1)
                             }
-                            if (photoUri != null) {
-                                TextButton(onClick = { photoUri = null }) { Text("Clear", color = MutedRedDanger, fontSize = 11.sp) }
+                            Button(
+                                onClick = {
+                                    try {
+                                        val tempFile = File(context.cacheDir, "cap_${System.currentTimeMillis()}.jpg")
+                                        val authority = "${context.packageName}.fileprovider"
+                                        val uri = FileProvider.getUriForFile(context, authority, tempFile)
+                                        tempCameraUri = uri
+                                        cameraLauncher.launch(uri)
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                        Toast.makeText(context, "Cannot open camera: ${e.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = HighlightTeal),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .heightIn(min = 36.dp)
+                            ) {
+                                Text("Click Photo", fontSize = 12.sp, maxLines = 1)
+                            }
+                        }
+                        if (photoUri != null) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            TextButton(
+                                onClick = { photoUri = null },
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(imageVector = Icons.Default.Delete, contentDescription = "", tint = MutedRedDanger, modifier = Modifier.size(14.dp))
+                                    Text("Clear Photo", color = MutedRedDanger, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
