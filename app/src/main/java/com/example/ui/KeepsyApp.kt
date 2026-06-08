@@ -1022,7 +1022,13 @@ fun SpacesScreen(viewModel: KeepsyViewModel, onNavigateToSub: (SubScreen) -> Uni
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
-                    Icon(imageVector = Icons.Default.Layers, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(72.dp))
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_keepsy_logo),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(text = "No spaces built yet", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Text(text = "To keep track of passports, chargers or keys, build nesting drawer models.", textAlign = TextAlign.Center, color = Color.Gray, fontSize = 14.sp)
@@ -3008,8 +3014,14 @@ fun TrashBinScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(imageVector = Icons.Default.DeleteOutline, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(72.dp))
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_keepsy_logo),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(text = "Trash Bin is empty.", color = Color.Gray)
                     }
                 }
