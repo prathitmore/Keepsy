@@ -46,8 +46,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.core.content.FileProvider
+import androidx.compose.ui.res.painterResource
 import coil.compose.AsyncImage
 import com.example.model.*
+import com.example.R
 import com.example.ui.theme.*
 import com.example.viewmodel.KeepsyViewModel
 import kotlinx.coroutines.delay
@@ -175,14 +177,12 @@ fun SplashScreenView() {
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.padding(32.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.AllInbox,
+            Image(
+                painter = painterResource(id = R.drawable.ic_keepsy_logo),
                 contentDescription = "Keepsy Launcher",
-                tint = HighlightTeal,
                 modifier = Modifier
-                    .size(96.dp)
-                    .background(DeepIndigoDarkSelection, CircleShape)
-                    .padding(20.dp)
+                    .size(100.dp)
+                    .clip(RoundedCornerShape(24.dp))
             )
             Spacer(modifier = Modifier.height(18.dp))
             Text(
@@ -556,7 +556,7 @@ fun DashboardScaffold(
                 // Tab Views Routing
                 if (currentSubScreen == SubScreen.None) {
                     when (currentTab) {
-                        TabScreen.Home -> HomeScreen(viewModel, onNavigateToSub)
+                        TabScreen.Home -> HomeScreen(viewModel, onTabSelected, onNavigateToSub)
                         TabScreen.Spaces -> SpacesScreen(viewModel, onNavigateToSub)
                         TabScreen.Search -> SearchScreen(viewModel, onNavigateToSub)
                         TabScreen.Activity -> ActivityScreen(viewModel, onNavigateToSub)
@@ -651,7 +651,11 @@ fun getSpaceIconVector(iconName: String?): ImageVector {
 
 // 4. --- TAB 1: HOME SCREEN FEED ---
 @Composable
-fun HomeScreen(viewModel: KeepsyViewModel, onNavigateToSub: (SubScreen) -> Unit) {
+fun HomeScreen(
+    viewModel: KeepsyViewModel,
+    onTabSelected: (TabScreen) -> Unit,
+    onNavigateToSub: (SubScreen) -> Unit
+) {
     val stats by viewModel.appStatistics.collectAsStateWithLifecycle()
     val favoritesList by viewModel.favoriteSpaces.collectAsStateWithLifecycle()
     val recentItemsList by viewModel.recentItems.collectAsStateWithLifecycle()
@@ -667,13 +671,25 @@ fun HomeScreen(viewModel: KeepsyViewModel, onNavigateToSub: (SubScreen) -> Unit)
         // Welcoming Title Area
         item {
             Column(modifier = Modifier.padding(bottom = 16.dp)) {
-                Text(
-                    text = "Keepsy",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Black, // Ultra bold
-                    fontFamily = FontFamily.SansSerif,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_keepsy_logo),
+                        contentDescription = "Keepsy Logo",
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                    )
+                    Text(
+                        text = "Keepsy",
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Black, // Ultra bold
+                        fontFamily = FontFamily.SansSerif,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
                 Text(
                     text = "A physical memory for your items.",
                     fontSize = 14.sp,
@@ -685,7 +701,7 @@ fun HomeScreen(viewModel: KeepsyViewModel, onNavigateToSub: (SubScreen) -> Unit)
         // Hero dominates direct search click overlay
         item {
             Card(
-                onClick = { /* Navigate to search tab directly */ },
+                onClick = { onTabSelected(TabScreen.Search) },
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(28.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)),
@@ -1277,7 +1293,7 @@ fun ActivityScreen(viewModel: KeepsyViewModel, onNavigateToSub: (SubScreen) -> U
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Memory Trail",
                     fontSize = 24.sp,
@@ -1290,12 +1306,14 @@ fun ActivityScreen(viewModel: KeepsyViewModel, onNavigateToSub: (SubScreen) -> U
                     color = Color.Gray
                 )
             }
+            Spacer(modifier = Modifier.width(12.dp))
             TextButton(
-                onClick = { onNavigateToSub(SubScreen.TrashBin) }
+                onClick = { onNavigateToSub(SubScreen.TrashBin) },
+                modifier = Modifier.wrapContentWidth()
             ) {
                 Icon(imageVector = Icons.Default.DeleteSweep, contentDescription = "", tint = HighlightTeal)
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Trash Bin", color = HighlightTeal)
+                Text("Trash Bin", color = HighlightTeal, maxLines = 1)
             }
         }
 
@@ -1597,7 +1615,15 @@ fun SettingsScreen(viewModel: KeepsyViewModel, onNavigateToSub: (SubScreen) -> U
                     .padding(vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = "Keepsy Version 1.0 (Founder Edition)", fontSize = 12.sp, color = Color.Gray)
+                Image(
+                    painter = painterResource(id = R.drawable.ic_keepsy_logo),
+                    contentDescription = "Keepsy Brand Logo",
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(text = "Keepsy Version 1.0 (Founder Edition)", fontSize = 12.sp, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)
                 Text(text = "Made for adults, photographers, and travelers.", fontSize = 10.sp, color = Color.Gray)
                 Spacer(modifier = Modifier.height(48.dp))
             }
@@ -1617,6 +1643,23 @@ fun ItemDetailsScreen(
     val context = LocalContext.current
     val itemDetails by viewModel.selectedItem.collectAsStateWithLifecycle()
     val activityTrail by viewModel.getActivityTrailForItem(itemId).collectAsState(initial = emptyList())
+    val allSpaces by viewModel.spaces.collectAsStateWithLifecycle(emptyList())
+
+    val spacePath = remember(itemDetails?.space, allSpaces) {
+        val details = itemDetails ?: return@remember emptyList<Space>()
+        val path = mutableListOf<Space>()
+        var currentSpace = details.space
+        while (currentSpace != null) {
+            path.add(0, currentSpace)
+            val parentId = currentSpace.parentSpaceId
+            currentSpace = if (parentId != null) {
+                allSpaces.find { it.spaceId == parentId }
+            } else {
+                null
+            }
+        }
+        path
+    }
 
     var displayDeleteDialog by remember { mutableStateOf(false) }
 
@@ -1716,21 +1759,80 @@ fun ItemDetailsScreen(
                     
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Location clickable card
+                    // Precise Storage Path Chain Card
                     Card(
-                        onClick = { details.space?.spaceId?.let { onNavigateToSub(SubScreen.SpaceDetails(it)) } },
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(imageVector = Icons.Default.Layers, contentDescription = "", tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(text = "Stored At Location", fontSize = 11.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f))
-                                Text(text = details.space?.name ?: "Unknown Area", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Layers,
+                                    contentDescription = "",
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Precise Storage Path Skeleton",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                            if (spacePath.isNotEmpty()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    spacePath.forEachIndexed { index, space ->
+                                        if (index > 0) {
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Default.KeyboardArrowRight,
+                                                contentDescription = ">",
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                        Surface(
+                                            onClick = { onNavigateToSub(SubScreen.SpaceDetails(space.spaceId)) },
+                                            color = if (space == details.space) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface.copy(alpha = 0.4f),
+                                            contentColor = if (space == details.space) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
+                                            shape = RoundedCornerShape(12.dp),
+                                            modifier = Modifier.padding(vertical = 2.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = getSpaceIconVector(space.icon),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(13.dp)
+                                                )
+                                                Text(
+                                                    text = space.name,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = if (space == details.space) FontWeight.Bold else FontWeight.Medium
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                Text(
+                                    text = "Loose / Not inside any Space",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
                             }
                         }
                     }
@@ -2142,12 +2244,16 @@ fun AddEditItemScreen(
                 selectedCategoryId = itObj.categoryId
                 tagsInput = itemDetails.tags.joinToString(", ") { tag -> tag.name }
             }
-        } else {
-            // Apply fallback automatic defaults
-            if (spacesList.isNotEmpty() && selectedSpaceId == 0L) {
+        }
+    }
+
+    // Assign automatic fallback defaults once database lists load successfully
+    LaunchedEffect(spacesList, categoriesList) {
+        if (itemId == null || itemId == 0L) {
+            if (selectedSpaceId == 0L && spacesList.isNotEmpty()) {
                 selectedSpaceId = spacesList.first().spaceId
             }
-            if (categoriesList.isNotEmpty()) {
+            if (selectedCategoryId == 0L && categoriesList.isNotEmpty()) {
                 selectedCategoryId = categoriesList.first().categoryId
             }
         }
@@ -2279,19 +2385,27 @@ fun AddEditItemScreen(
                     .testTag("item_form_name_input")
             )
 
-            // Space spinner Selector
-            Box(modifier = Modifier.fillMaxWidth()) {
+            // Space spinner Selector (Click-Bubble Fix)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showSpacesDrop = true }
+            ) {
                 val currentSpace = spacesList.find { it.spaceId == selectedSpaceId }
                 OutlinedTextField(
                     value = currentSpace?.name ?: "Select Space *",
                     onValueChange = {},
                     readOnly = true,
+                    enabled = false, // direct input disabled to bubble clicks to the Box container
                     label = { Text("Storage Space Container") },
                     trailingIcon = { Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "") },
-                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = MaterialTheme.colorScheme.onBackground, unfocusedTextColor = MaterialTheme.colorScheme.onBackground),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showSpacesDrop = true }
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledTextColor = MaterialTheme.colorScheme.onBackground,
+                        disabledBorderColor = MaterialTheme.colorScheme.outline,
+                        disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 )
                 DropdownMenu(
                     expanded = showSpacesDrop,
@@ -2310,19 +2424,27 @@ fun AddEditItemScreen(
                 }
             }
 
-            // Category spinner select
-            Box(modifier = Modifier.fillMaxWidth()) {
+            // Category spinner select (Click-Bubble Fix)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showCategoriesDrop = true }
+            ) {
                 val currentCategory = categoriesList.find { it.categoryId == selectedCategoryId }
                 OutlinedTextField(
                     value = currentCategory?.name ?: "Select Category *",
                     onValueChange = {},
                     readOnly = true,
+                    enabled = false, // direct input disabled to bubble clicks to the Box container
                     label = { Text("Belonging Category") },
                     trailingIcon = { Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "") },
-                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = MaterialTheme.colorScheme.onBackground, unfocusedTextColor = MaterialTheme.colorScheme.onBackground),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showCategoriesDrop = true }
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledTextColor = MaterialTheme.colorScheme.onBackground,
+                        disabledBorderColor = MaterialTheme.colorScheme.outline,
+                        disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 )
                 DropdownMenu(
                     expanded = showCategoriesDrop,
@@ -2605,20 +2727,28 @@ fun AddEditSpaceScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Nested Space: Parent Space Spinner selector
-            Box(modifier = Modifier.fillMaxWidth()) {
+            // Nested Space: Parent Space Spinner selector (Click-Bubble Fix)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showParentDrop = true }
+            ) {
                 val availableSpaces = spacesList.filter { it.spaceId != spaceId } // Prevent circular parent mapping!
                 val parentSpace = availableSpaces.find { it.spaceId == selectedParentId }
                 OutlinedTextField(
                     value = parentSpace?.name ?: "No Parent (Root space location)",
                     onValueChange = {},
                     readOnly = true,
+                    enabled = false, // direct input disabled to bubble clicks to the Box container
                     label = { Text("Parent Space Container (Nesting)") },
                     trailingIcon = { Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "") },
-                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = MaterialTheme.colorScheme.onBackground, unfocusedTextColor = MaterialTheme.colorScheme.onBackground),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showParentDrop = true }
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledTextColor = MaterialTheme.colorScheme.onBackground,
+                        disabledBorderColor = MaterialTheme.colorScheme.outline,
+                        disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 )
                 DropdownMenu(
                     expanded = showParentDrop,
