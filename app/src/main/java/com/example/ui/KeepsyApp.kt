@@ -29,6 +29,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -636,6 +638,123 @@ fun getCategoryIconVector(iconName: String?): ImageVector {
 }
 
 @Composable
+fun getSmartItemIconVector(itemName: String, categoryIconName: String?): ImageVector {
+    val cleanName = itemName.lowercase().trim()
+    return when {
+        // Headphones, earbuds, headsets
+        cleanName.contains("headphone") || cleanName.contains("earphone") || cleanName.contains("headset") || cleanName.contains("earbud") -> Icons.Default.Headphones
+        
+        // Ice cream, popsicles, gelato
+        cleanName.contains("icecream") || cleanName.contains("ice cream") || cleanName.contains("gelato") || cleanName.contains("popsicle") -> Icons.Default.Icecream
+        
+        // Desk, tables, desk accessories
+        cleanName.contains("desk") || cleanName.contains("table") || cleanName.contains("counter") || cleanName.contains("workstation") -> Icons.Default.Desk
+        
+        // Computers, laptops, keyboards, gaming mouse
+        cleanName.contains("computer") || cleanName.contains("laptop") || cleanName.contains("macbook") || cleanName.contains("chromebook") || cleanName.contains("desktop") || cleanName.contains("pc") -> Icons.Default.Laptop
+        cleanName.contains("keyboard") || cleanName.contains("mouse") || cleanName.contains("trackpad") -> Icons.Default.Keyboard
+        cleanName.contains("monitor") || cleanName.contains("display") || cleanName.contains("screen") -> Icons.Default.Tv
+        cleanName.contains("tablet") || cleanName.contains("ipad") -> Icons.Default.TabletAndroid
+        cleanName.contains("phone") || cleanName.contains("mobile") || cleanName.contains("iphone") || cleanName.contains("android") || cleanName.contains("smartphone") -> Icons.Default.PhoneAndroid
+        cleanName.contains("console") || cleanName.contains("gamepad") || cleanName.contains("controller") || cleanName.contains("playstation") || cleanName.contains("xbox") || cleanName.contains("nintendo") || cleanName.contains("switch") -> Icons.Default.Gamepad
+        
+        // Electronics / Audio / Power
+        cleanName.contains("speaker") || cleanName.contains("speakers") || cleanName.contains("audio") || cleanName.contains("sound") || cleanName.contains("subwoofer") -> Icons.Default.Speaker
+        cleanName.contains("camera") || cleanName.contains("photo") || cleanName.contains("lens") || cleanName.contains("camcorder") || cleanName.contains("gopro") -> Icons.Default.CameraAlt
+        cleanName.contains("charger") || cleanName.contains("cable") || cleanName.contains("wire") || cleanName.contains("adapter") || cleanName.contains("battery") || cleanName.contains("powerbank") || cleanName.contains("power bank") -> Icons.Default.BatteryChargingFull
+        cleanName.contains("watch") || cleanName.contains("smartwatch") || cleanName.contains("clock") || cleanName.contains("timer") || cleanName.contains("stopwatch") -> Icons.Default.Watch
+        cleanName.contains("tv") || cleanName.contains("television") || cleanName.contains("streaming") -> Icons.Default.Tv
+        cleanName.contains("wifi") || cleanName.contains("router") || cleanName.contains("modem") || cleanName.contains("internet") -> Icons.Default.Wifi
+        cleanName.contains("bluetooth") || cleanName.contains("wireless") -> Icons.Default.Bluetooth
+        cleanName.contains("mic") || cleanName.contains("microphone") -> Icons.Default.Mic
+
+        // Clothes / Apparel / Wearables
+        cleanName.contains("shirt") || cleanName.contains("tshirt") || cleanName.contains("pants") || cleanName.contains("jeans") || cleanName.contains("jacket") || cleanName.contains("coat") || cleanName.contains("suit") || cleanName.contains("skirt") || cleanName.contains("dress") || cleanName.contains("apparel") || cleanName.contains("wear") -> Icons.Default.Checkroom
+        cleanName.contains("shoe") || cleanName.contains("shoes") || cleanName.contains("sneaker") || cleanName.contains("sneakers") || cleanName.contains("boot") || cleanName.contains("boots") || cleanName.contains("sandal") || cleanName.contains("sandals") || cleanName.contains("sock") || cleanName.contains("socks") || cleanName.contains("footwear") -> Icons.Default.DirectionsWalk
+        cleanName.contains("glasses") || cleanName.contains("sunglasses") || cleanName.contains("spectacles") || cleanName.contains("goggles") || cleanName.contains("specs") -> Icons.Default.Visibility
+        cleanName.contains("hat") || cleanName.contains("cap") || cleanName.contains("beanie") || cleanName.contains("helmet") || cleanName.contains("headwear") -> Icons.Default.Face
+        
+        // Bags / Luggage
+        cleanName.contains("bag") || cleanName.contains("backpack") || cleanName.contains("handbag") || cleanName.contains("purse") || cleanName.contains("tote") || cleanName.contains("wallet") || cleanName.contains("suitcase") || cleanName.contains("luggage") || cleanName.contains("briefcase") -> Icons.Default.Work
+
+        // Valuables / Jewelry
+        cleanName.contains("diamond") || cleanName.contains("ring") || cleanName.contains("necklace") || cleanName.contains("jewelry") || cleanName.contains("earrings") || cleanName.contains("bracelet") || cleanName.contains("gem") || cleanName.contains("gold") || cleanName.contains("silver") || cleanName.contains("jewel") -> Icons.Default.Diamond
+        
+        // Home & Furniture
+        cleanName.contains("chair") || cleanName.contains("sofa") || cleanName.contains("couch") || cleanName.contains("stool") || cleanName.contains("seat") || cleanName.contains("bench") || cleanName.contains("armchair") -> Icons.Default.Chair
+        cleanName.contains("bed") || cleanName.contains("mattress") || cleanName.contains("pillow") || cleanName.contains("blanket") || cleanName.contains("sheet") || cleanName.contains("bedding") || cleanName.contains("comforter") -> Icons.Default.Bed
+        cleanName.contains("lamp") || cleanName.contains("light") || cleanName.contains("bulb") || cleanName.contains("torch") || cleanName.contains("lantern") || cleanName.contains("flashlight") -> Icons.Default.Lightbulb
+        cleanName.contains("refrigerator") || cleanName.contains("fridge") || cleanName.contains("microwave") || cleanName.contains("oven") || cleanName.contains("stove") || cleanName.contains("toaster") || cleanName.contains("blender") || cleanName.contains("kitchenware") || cleanName.contains("pot") || cleanName.contains("pan") -> Icons.Default.Kitchen
+        cleanName.contains("door") || cleanName.contains("window") || cleanName.contains("gate") -> Icons.Default.DoorFront
+        cleanName.contains("bathtub") || cleanName.contains("shower") || cleanName.contains("bath") || cleanName.contains("bathroom") || cleanName.contains("toilet") -> Icons.Default.Bathtub
+
+        // Food & Drink / Cafes
+        cleanName.contains("coffee") || cleanName.contains("tea") || cleanName.contains("mug") || cleanName.contains("cup") || cleanName.contains("espresso") || cleanName.contains("latte") || cleanName.contains("cappuccino") || cleanName.contains("cafe") || cleanName.contains("starbucks") -> Icons.Default.LocalCafe
+        cleanName.contains("water") || cleanName.contains("drink") || cleanName.contains("beverage") || cleanName.contains("juice") || cleanName.contains("bottle") || cleanName.contains("soda") || cleanName.contains("can") || cleanName.contains("flask") || cleanName.contains("thermos") -> Icons.Default.LocalDrink
+        cleanName.contains("food") || cleanName.contains("snack") || cleanName.contains("cookie") || cleanName.contains("cookies") || cleanName.contains("biscuit") || cleanName.contains("sandwich") || cleanName.contains("lunchbox") || cleanName.contains("plate") || cleanName.contains("meal") || cleanName.contains("dinner") || cleanName.contains("lunch") -> Icons.Default.Restaurant
+        cleanName.contains("cake") || cleanName.contains("cupcake") || cleanName.contains("pastry") || cleanName.contains("pie") || cleanName.contains("muffin") || cleanName.contains("bakery") || cleanName.contains("dessert") -> Icons.Default.Cake
+        cleanName.contains("pizza") -> Icons.Default.LocalPizza
+        cleanName.contains("egg") || cleanName.contains("eggs") || cleanName.contains("breakfast") -> Icons.Default.Egg
+
+        // Vehicles & Travel
+        cleanName.contains("car") || cleanName.contains("vehicle") || cleanName.contains("automobile") || cleanName.contains("suv") || cleanName.contains("truck") || cleanName.contains("taxi") || cleanName.contains("cab") -> Icons.Default.DirectionsCar
+        cleanName.contains("bike") || cleanName.contains("bicycle") || cleanName.contains("scooter") || cleanName.contains("motorcycle") || cleanName.contains("cycle") -> Icons.Default.DirectionsBike
+        cleanName.contains("bus") -> Icons.Default.DirectionsBus
+        cleanName.contains("train") || cleanName.contains("metro") || cleanName.contains("subway") || cleanName.contains("rail") -> Icons.Default.DirectionsTransit
+        cleanName.contains("boat") || cleanName.contains("ship") || cleanName.contains("ferry") || cleanName.contains("yacht") -> Icons.Default.DirectionsBoat
+        cleanName.contains("flight") || cleanName.contains("plane") || cleanName.contains("airplane") || cleanName.contains("ticket") || cleanName.contains("boarding") || cleanName.contains("passport") || cleanName.contains("visa") -> Icons.Default.Flight
+        cleanName.contains("map") || cleanName.contains("gps") || cleanName.contains("navigation") || cleanName.contains("compass") || cleanName.contains("route") -> Icons.Default.Map
+        cleanName.contains("hotel") || cleanName.contains("motel") || cleanName.contains("inn") || cleanName.contains("resort") -> Icons.Default.Hotel
+        cleanName.contains("gas") || cleanName.contains("fuel") || cleanName.contains("petrol") || cleanName.contains("station") -> Icons.Default.LocalGasStation
+
+        // Sports / Games / Fitness
+        cleanName.contains("ball") || cleanName.contains("soccer") || cleanName.contains("football") || cleanName.contains("basketball") || cleanName.contains("tennis") || cleanName.contains("sports") || cleanName.contains("gym") || cleanName.contains("dumbbell") || cleanName.contains("dumbbells") || cleanName.contains("fitness") || cleanName.contains("workout") || cleanName.contains("exercise") -> Icons.Default.SportsBasketball
+        cleanName.contains("tent") || cleanName.contains("camp") || cleanName.contains("camping") || cleanName.contains("forest") || cleanName.contains("hiking") || cleanName.contains("backpacking") || cleanName.contains("outdoor") || cleanName.contains("mountain") -> Icons.Default.Terrain
+        cleanName.contains("trophy") || cleanName.contains("award") || cleanName.contains("prize") || cleanName.contains("winner") || cleanName.contains("medal") || cleanName.contains("championship") -> Icons.Default.EmojiEvents
+
+        // Books & Stationery
+        cleanName.contains("book") || cleanName.contains("notebook") || cleanName.contains("novel") || cleanName.contains("magazine") || cleanName.contains("journal") || cleanName.contains("diary") || cleanName.contains("textbook") || cleanName.contains("catalog") || cleanName.contains("dictionary") -> Icons.Default.Book
+        cleanName.contains("pen") || cleanName.contains("pencil") || cleanName.contains("marker") || cleanName.contains("highlighter") || cleanName.contains("crayon") || cleanName.contains("stationery") || cleanName.contains("ink") || cleanName.contains("quill") || cleanName.contains("sharpener") -> Icons.Default.Create
+        cleanName.contains("paint") || cleanName.contains("brush") || cleanName.contains("canvas") || cleanName.contains("sketchbook") || cleanName.contains("easel") || cleanName.contains("palette") || cleanName.contains("acrylic") || cleanName.contains("watercolor") -> Icons.Default.Brush
+        cleanName.contains("music") || cleanName.contains("song") || cleanName.contains("guitar") || cleanName.contains("piano") || cleanName.contains("violin") || cleanName.contains("flute") || cleanName.contains("drums") || cleanName.contains("instrument") || cleanName.contains("melody") || cleanName.contains("track") -> Icons.Default.MusicNote
+        cleanName.contains("movie") || cleanName.contains("film") || cleanName.contains("cinema") || cleanName.contains("show") || cleanName.contains("theater") || cleanName.contains("video") || cleanName.contains("dvd") || cleanName.contains("bluray") -> Icons.Default.Movie
+
+        // Tools / Keys / Scissors
+        cleanName.contains("tool") || cleanName.contains("hammer") || cleanName.contains("screwdriver") || cleanName.contains("wrench") || cleanName.contains("pliers") || cleanName.contains("saw") || cleanName.contains("drill") || cleanName.contains("hardware") || cleanName.contains("screw") || cleanName.contains("bolt") || cleanName.contains("nail") || cleanName.contains("spanner") || cleanName.contains("toolkit") -> Icons.Default.Build
+        cleanName.contains("scissors") || cleanName.contains("scissor") || cleanName.contains("clipper") || cleanName.contains("cut") || cleanName.contains("shear") || cleanName.contains("cutter") || cleanName.contains("blade") || cleanName.contains("knife") || cleanName.contains("pocketknife") -> Icons.Default.ContentCut
+        cleanName.contains("key") || cleanName.contains("keys") || cleanName.contains("lock") || cleanName.contains("keychain") || cleanName.contains("padlock") || cleanName.contains("unlocked") || cleanName.contains("latch") || cleanName.contains("deadbolt") -> Icons.Default.VpnKey
+        cleanName.contains("umbrella") || cleanName.contains("parasol") || cleanName.contains("raincoat") -> Icons.Default.Umbrella
+
+        // Office / Finance / Paperwork
+        cleanName.contains("document") || cleanName.contains("paper") || cleanName.contains("invoice") || cleanName.contains("receipt") || cleanName.contains("bill") || cleanName.contains("contract") || cleanName.contains("certificate") || cleanName.contains("tax") || cleanName.contains("form") || cleanName.contains("letter") || cleanName.contains("envelope") || cleanName.contains("mail") || cleanName.contains("post") -> Icons.Default.Description
+        cleanName.contains("card") || cleanName.contains("credit") || cleanName.contains("debit") || cleanName.contains("visa") || cleanName.contains("mastercard") || cleanName.contains("amex") || cleanName.contains("giftcard") || cleanName.contains("gift card") || cleanName.contains("storecard") -> Icons.Default.CreditCard
+        cleanName.contains("money") || cleanName.contains("cash") || cleanName.contains("coin") || cleanName.contains("coins") || cleanName.contains("dollar") || cleanName.contains("rupee") || cleanName.contains("euro") || cleanName.contains("yen") || cleanName.contains("wealth") || cleanName.contains("funds") -> Icons.Default.MonetizationOn
+        cleanName.contains("box") || cleanName.contains("package") || cleanName.contains("carton") || cleanName.contains("parcel") || cleanName.contains("shipment") || cleanName.contains("delivery") || cleanName.contains("crate") || cleanName.contains("storage") -> Icons.Default.Inventory2
+        cleanName.contains("bank") || cleanName.contains("atm") || cleanName.contains("checking") || cleanName.contains("savings") -> Icons.Default.AccountBalance
+        cleanName.contains("store") || cleanName.contains("shop") || cleanName.contains("market") || cleanName.contains("boutique") || cleanName.contains("grocer") -> Icons.Default.Store
+        cleanName.contains("school") || cleanName.contains("college") || cleanName.contains("university") || cleanName.contains("class") || cleanName.contains("classroom") || cleanName.contains("academy") || cleanName.contains("institute") -> Icons.Default.School
+
+        // Health / Beauty / Medical
+        cleanName.contains("pill") || cleanName.contains("medicine") || cleanName.contains("tablet") || cleanName.contains("capsule") || cleanName.contains("drug") || cleanName.contains("prescription") || cleanName.contains("firstaid") || cleanName.contains("first aid") || cleanName.contains("medical") || cleanName.contains("doctor") || cleanName.contains("hospital") || cleanName.contains("clinic") -> Icons.Default.MedicalServices
+        cleanName.contains("mask") || cleanName.contains("masks") || cleanName.contains("respirator") -> Icons.Default.Masks
+        cleanName.contains("vaccine") || cleanName.contains("syringe") || cleanName.contains("injection") || cleanName.contains("shot") || cleanName.contains("booster") -> Icons.Default.Vaccines
+        cleanName.contains("soap") || cleanName.contains("shampoo") || cleanName.contains("shaving") || cleanName.contains("toothbrush") || cleanName.contains("toothpaste") || cleanName.contains("comb") || cleanName.contains("towel") || cleanName.contains("conditioner") || cleanName.contains("loofah") || cleanName.contains("deodorant") -> Icons.Default.Bathtub
+        cleanName.contains("perfume") || cleanName.contains("makeup") || cleanName.contains("lipstick") || cleanName.contains("lotion") || cleanName.contains("cream") || cleanName.contains("beauty") || cleanName.contains("cosmetic") || cleanName.contains("scent") || cleanName.contains("cologne") -> Icons.Default.Face
+
+        // Plants / Animals / Weather
+        cleanName.contains("plant") || cleanName.contains("flower") || cleanName.contains("leaf") || cleanName.contains("tree") || cleanName.contains("garden") || cleanName.contains("herbs") || cleanName.contains("rose") || cleanName.contains("shrub") || cleanName.contains("flora") || cleanName.contains("seed") -> Icons.Default.LocalFlorist
+        cleanName.contains("pet") || cleanName.contains("dog") || cleanName.contains("cat") || cleanName.contains("puppy") || cleanName.contains("kitten") || cleanName.contains("hamster") || cleanName.contains("rabbit") || cleanName.contains("bird") || cleanName.contains("fish") || cleanName.contains("paw") || cleanName.contains("animal") || cleanName.contains("veterinary") -> Icons.Default.Pets
+        cleanName.contains("sun") || cleanName.contains("sunny") || cleanName.contains("solar") -> Icons.Default.WbSunny
+        cleanName.contains("cloud") || cleanName.contains("cloudy") -> Icons.Default.Cloud
+        cleanName.contains("moon") || cleanName.contains("night") -> Icons.Default.DarkMode
+        cleanName.contains("star") || cleanName.contains("stars") || cleanName.contains("rating") -> Icons.Default.Star
+
+        // Fallback to Category Icon
+        else -> getCategoryIconVector(categoryIconName)
+    }
+}
+
+@Composable
 fun getSpaceIconVector(iconName: String?): ImageVector {
     return when (iconName) {
         "home" -> Icons.Default.Home
@@ -921,7 +1040,7 @@ fun ItemRowCard(itemDetails: ItemWithDetails, onClick: () -> Unit) {
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = getCategoryIconVector(itemDetails.category?.icon),
+                        imageVector = getSmartItemIconVector(itemDetails.item.name, itemDetails.category?.icon),
                         contentDescription = "Fallback",
                         tint = parseCategoryColor(itemDetails.category?.color),
                         modifier = Modifier.size(26.dp)
@@ -1182,6 +1301,12 @@ fun SearchScreen(viewModel: KeepsyViewModel, onNavigateToSub: (SubScreen) -> Uni
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     val spacesList by viewModel.spaces.collectAsStateWithLifecycle(emptyList())
 
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1211,6 +1336,7 @@ fun SearchScreen(viewModel: KeepsyViewModel, onNavigateToSub: (SubScreen) -> Uni
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
+                .focusRequester(focusRequester)
                 .testTag("instant_search_input_field")
         )
 
@@ -1440,6 +1566,56 @@ fun SettingsScreen(viewModel: KeepsyViewModel, onNavigateToSub: (SubScreen) -> U
     var backupString by remember { mutableStateOf("") }
     var restoreString by remember { mutableStateOf("") }
 
+    // System Picker launcher for Exporting JSON file
+    val saveBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            viewModel.exportBackup { json ->
+                scope.launch {
+                    try {
+                        context.contentResolver.openOutputStream(uri)?.use { os ->
+                            os.write(json.toByteArray(Charsets.UTF_8))
+                        }
+                        Toast.makeText(context, "Backup exported & saved successfully!", Toast.LENGTH_LONG).show()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        Toast.makeText(context, "Failed to save backup: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+    }
+
+    // System Picker launcher for Importing / Restoring JSON file
+    val openBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    val content = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                        inputStream.readBytes().toString(Charsets.UTF_8)
+                    }
+                    if (!content.isNullOrBlank()) {
+                        viewModel.importBackup(content) { success ->
+                            if (success) {
+                                Toast.makeText(context, "Backup restored successfully!", Toast.LENGTH_LONG).show()
+                            } else {
+                                Toast.makeText(context, "Failed to restore backup from selected file.", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    } else {
+                        Toast.makeText(context, "The selected backup file is empty or invalid.", Toast.LENGTH_LONG).show()
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(context, "Restore failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -1471,26 +1647,57 @@ fun SettingsScreen(viewModel: KeepsyViewModel, onNavigateToSub: (SubScreen) -> U
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(text = "Appearance Theme", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        FilterChip(
-                            selected = darkModePreferred == null,
-                            onClick = { viewModel.setDarkModePreference(null) },
-                            label = { Text("System Default") }
+                        val options = listOf(
+                            Triple(null, "System", Icons.Default.Settings),
+                            Triple(false, "Light", Icons.Default.LightMode),
+                            Triple(true, "Dark", Icons.Default.DarkMode)
                         )
-                        FilterChip(
-                            selected = darkModePreferred == false,
-                            onClick = { viewModel.setDarkModePreference(false) },
-                            label = { Text("Light Mode") }
-                        )
-                        FilterChip(
-                            selected = darkModePreferred == true,
-                            onClick = { viewModel.setDarkModePreference(true) },
-                            label = { Text("Dark Mode") }
-                        )
+
+                        options.forEach { (pref, label, icon) ->
+                            val isSelected = darkModePreferred == pref
+                            val backgroundColor = if (isSelected) HighlightTeal else Color.Transparent
+                            val contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(backgroundColor)
+                                    .clickable { viewModel.setDarkModePreference(pref) }
+                                    .padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = contentColor,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = label,
+                                        color = contentColor,
+                                        fontSize = 13.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1503,89 +1710,192 @@ fun SettingsScreen(viewModel: KeepsyViewModel, onNavigateToSub: (SubScreen) -> U
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "Data Management", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text(text = "Keepsy is 100% offline-first. Your memories reside solely on your device. Take regular local backups.", fontSize = 12.sp, color = Color.Gray)
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    Button(
-                        onClick = {
-                            viewModel.exportBackup { json ->
-                                backupString = json
-                                showBackupArea = true
-                                Toast.makeText(context, "Backup Completed! Copy JSON below.", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = HighlightTeal),
-                        modifier = Modifier.fillMaxWidth()
+                    Text(
+                        text = "Data Management",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Keepsy is 100% offline-first. Your memories and structures reside solely on your device. Use the system explorer to back up or restore your data.",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+                    )
+
+                    // 1. Export Section
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.Backup, contentDescription = "")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Export Full Local Backup JSON")
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    if (showBackupArea && backupString.isNotEmpty()) {
-                        OutlinedTextField(
-                            value = backupString,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Your Encrypted On-Device Backup") },
-                            colors = OutlinedTextFieldDefaults.colors(focusedTextColor = MaterialTheme.colorScheme.onBackground, unfocusedTextColor = MaterialTheme.colorScheme.onBackground),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(120.dp)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        TextButton(
-                            onClick = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                val clip = android.content.ClipData.newPlainText("Keepsy Backup", backupString)
-                                clipboard.setPrimaryClip(clip)
-                                Toast.makeText(context, "Copied backup JSON to clipboard!", Toast.LENGTH_SHORT).show()
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Backup,
+                                    contentDescription = "Export icon",
+                                    tint = HighlightTeal,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Text(
+                                    text = "Secure Backup Export",
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 14.sp
+                                )
                             }
-                        ) {
-                            Text("Copy JSON to Clipboard")
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Export your nesting spaces, items, categories, and logs into a single backup file. Save it safely to your device or cloud storage.",
+                                fontSize = 11.sp,
+                                color = Color.Gray
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Button(
+                                onClick = {
+                                    val formattedTime = SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault()).format(java.util.Date())
+                                    val fileName = "keepsy_backup_$formattedTime.json"
+                                    saveBackupLauncher.launch(fileName)
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = HighlightTeal),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(imageVector = Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Choose Backup Destination", fontSize = 13.sp)
+                            }
                         }
                     }
 
-                    HorizontalDivider(modifier = Modifier.padding(top = 12.dp, bottom = 12.dp))
-
-                    Text(text = "Restore Local Sync Backup", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    OutlinedTextField(
-                        value = restoreString,
-                        onValueChange = { restoreString = it },
-                        label = { Text("Paste Saved JSON String Here") },
-                        placeholder = { Text("{ \"version\": 1 ... }") },
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = MaterialTheme.colorScheme.onBackground, unfocusedTextColor = MaterialTheme.colorScheme.onBackground),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = {
-                            if (restoreString.isBlank()) {
-                                Toast.makeText(context, "Please paste valid backup JSON first", Toast.LENGTH_SHORT).show()
-                                return@Button
-                            }
-                            viewModel.importBackup(restoreString) { success ->
-                                if (success) {
-                                    restoreString = ""
-                                    Toast.makeText(context, "Backup restored successfully!", Toast.LENGTH_LONG).show() // SUCCESS FEEDBACK
-                                } else {
-                                    Toast.makeText(context, "Restore failed. Please check JSON contents.", Toast.LENGTH_LONG).show()
-                                }
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = HighlightTeal),
+                    // 2. Restore Section
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(imageVector = Icons.Default.Restore, contentDescription = "")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Verify and Restore Backup Now")
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Restore,
+                                    contentDescription = "Restore icon",
+                                    tint = HighlightTeal,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Text(
+                                    text = "Select & Restore Backup",
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 14.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Restore your entire database from a previously exported JSON file. This will restore all spaces and historical logs.",
+                                fontSize = 11.sp,
+                                color = Color.Gray
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Button(
+                                onClick = {
+                                    openBackupLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = HighlightTeal),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(imageVector = Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Select Backup File", fontSize = 13.sp)
+                            }
+                        }
+                    }
+
+                    var showClipboardOption by remember { mutableStateOf(false) }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(
+                        onClick = { showClipboardOption = !showClipboardOption },
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    ) {
+                        Text(
+                            text = if (showClipboardOption) "Hide Manual JSON Copy/Paste" else "Show Manual JSON Copy/Paste (Advanced)",
+                            fontSize = 11.sp,
+                            color = Color.Gray
+                        )
+                    }
+
+                    if (showClipboardOption) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(text = "Manual Backup String (Clipboard)", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            viewModel.exportBackup { json ->
+                                                backupString = json
+                                                showBackupArea = true
+                                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                                val clip = android.content.ClipData.newPlainText("Keepsy Backup", json)
+                                                clipboard.setPrimaryClip(clip)
+                                                Toast.makeText(context, "Copied backup JSON to clipboard!", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Copy Backup", fontSize = 11.sp)
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            if (restoreString.isBlank()) {
+                                                Toast.makeText(context, "Pasted backup is empty", Toast.LENGTH_SHORT).show()
+                                                return@Button
+                                            }
+                                            viewModel.importBackup(restoreString) { success ->
+                                                if (success) {
+                                                    restoreString = ""
+                                                    Toast.makeText(context, "Backup restored successfully!", Toast.LENGTH_LONG).show()
+                                                } else {
+                                                    Toast.makeText(context, "Restore failed. Please check JSON contents.", Toast.LENGTH_LONG).show()
+                                                }
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Restore String", fontSize = 11.sp)
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                OutlinedTextField(
+                                    value = restoreString,
+                                    onValueChange = { restoreString = it },
+                                    label = { Text("Paste Saved JSON String Here", fontSize = 11.sp) },
+                                    placeholder = { Text("{ \"version\": 1 ... }", fontSize = 11.sp) },
+                                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = MaterialTheme.colorScheme.onBackground, unfocusedTextColor = MaterialTheme.colorScheme.onBackground),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(100.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -1737,7 +2047,7 @@ fun ItemDetailsScreen(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(
-                                    imageVector = getCategoryIconVector(details.category?.icon),
+                                    imageVector = getSmartItemIconVector(details.item.name, details.category?.icon),
                                     contentDescription = "",
                                     tint = Color.White,
                                     modifier = Modifier.size(72.dp)
