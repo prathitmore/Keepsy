@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "965775984563",
+    "project_id": "keepsy-project",
+    "storage_bucket": "keepsy-project.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:965775984563:android:f8c923b1eb8f29c451edc6",
+        "android_client_info": {
+          "package_name": "com.keepsy.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "965775984563-b9s8307obi5kb71fm3jeckd8u53d3tf6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.keepsy.app",
+            "certificate_hash": "29761eee2fa08e1ba0f2049edc45c2ce1ffa9473"
+          }
+        },
+        {
+          "client_id": "965775984563-s4r1k691d2b6sea62g0m62n4lkk88gm6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD98iPFIm1KEEgChBBqLC_I70rHMprKqlo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "965775984563-dplile3ki4gpe5igi77b1nglaa19l5us.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

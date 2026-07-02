@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme. -->
+    <style name="Theme.Keepsy" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/keepsy_background</item>
+        <item name="android:statusBarColor">@color/keepsy_background</item>
+        <item name="android:navigationBarColor">@color/keepsy_background</item>
+    </style>
+
+    <!-- SplashScreen API Theme -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <!-- Set the splash screen background. -->
+        <item name="windowSplashScreenBackground">@color/keepsy_background</item>
+        <!-- Use an icon for the splash screen. -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon_centered</item>
+        <!-- The theme to use after the splash screen is finished. -->
+        <item name="postSplashScreenTheme">@style/Theme.Keepsy</item>
+    </style>
+
+    <style name="Theme.MyApplication" parent="Theme.Keepsy" />
+</resources>

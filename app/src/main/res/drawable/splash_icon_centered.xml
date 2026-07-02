@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      Total icon size for Android 12+ Splash Screen API is 108dp x 108dp.
+      The 'Safe Zone' for the icon is the inner 72dp circle.
+      We define a fixed size for the logo and center it to prevent 'Zoom' issues.
+    -->
+    <item
+        android:width="108dp"
+        android:height="108dp">
+        <color android:color="@android:color/transparent" />
+    </item>
+
+    <item
+        android:drawable="@drawable/ic_keepsy_logo"
+        android:width="64dp"
+        android:height="64dp"
+        android:gravity="center" />
+</layer-list>

@@ -1,0 +1,44 @@
+<resources>
+    <string name="app_name">Keepsy</string>
+    <string name="splash_tagline">Your memory for physical things.</string>
+
+    <!-- Welcome Screen -->
+    <string name="welcome_title">Never lose track of what matters.</string>
+    <string name="welcome_subtitle">Remember where you keep everything—from passports and documents to cables and everyday essentials.</string>
+    <string name="continue_btn">Continue</string>
+    <string name="sign_in_btn">Sign In</string>
+    <string name="create_account_btn">Create Account</string>
+    <string name="skip_for_now">Skip for now</string>
+
+    <!-- Sign In Screen -->
+    <string name="sign_in_title">Welcome back</string>
+    <string name="sign_in_subtitle">Sign in to sync your Keepsy account across your devices.</string>
+    <string name="email_label">Email</string>
+    <string name="password_label">Password</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="or">OR</string>
+    <string name="continue_google">Continue with Google</string>
+    <string name="continue_email">Continue with Email</string>
+    <string name="continue_no_account">Continue without account</string>
+    <string name="no_account_prompt">Don\'t have an account?</string>
+    <string name="create_one">Create one</string>
+
+    <!-- Sign Up Screen -->
+    <string name="sign_up_title">Create your Keepsy account</string>
+    <string name="sign_up_subtitle">Protect your memories and access them anywhere.</string>
+    <string name="full_name_label">Full Name</string>
+    <string name="confirm_password_label">Confirm Password</string>
+    <string name="already_have_account">Already have an account?</string>
+
+    <!-- Success State -->
+    <string name="welcome_back_user">Welcome back, %1$s.</string>
+    <string name="taking_to_memories">Taking you to your memories...</string>
+
+    <!-- Error Messages -->
+    <string name="error_incorrect_password">Incorrect password</string>
+    <string name="error_no_internet">No internet connection</string>
+    <string name="error_email_exists">Email already exists</string>
+
+    <!-- Firebase/Google Auth (Replace with your actual ID from Console) -->
+    <string name="default_web_client_id" translatable="false">965775984563-s4r1k691d2b6sea62g0m62n4lkk88gm6.apps.googleusercontent.com</string>
+</resources>

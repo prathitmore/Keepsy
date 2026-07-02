@@ -1,0 +1,6 @@
+{
+  "name": "Keepsy",
+  "description": "Private, offline-first personal memory system for physical belongings. Never lose track of where you kept things.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

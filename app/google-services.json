@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "965775984563",
+    "project_id": "keepsy-project",
+    "storage_bucket": "keepsy-project.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:965775984563:android:f8c923b1eb8f29c451edc6",
+        "android_client_info": {
+          "package_name": "com.keepsy.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD98iPFIm1KEEgChBBqLC_I70rHMprKqlo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
