@@ -16,12 +16,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -47,11 +48,18 @@ fun TutorialOverlay(
     val config = LocalConfiguration.current
     val screenHeightPx = with(density) { config.screenHeightDp.dp.toPx() }
 
+    var overlayOffset by remember { mutableStateOf(Offset.Zero) }
+
     val rawRect = currentStep.spotlightKey?.let { spotlights[it] }
     
+    // Translate the rect to be relative to the overlay's origin
+    val relativeRect = remember(rawRect, overlayOffset) {
+        rawRect?.translate(-overlayOffset)
+    }
+
     // Add 8dp padding around the spotlight for "breathing room"
-    val inflatedRect = remember(rawRect) {
-        rawRect?.let {
+    val inflatedRect = remember(relativeRect) {
+        relativeRect?.let {
             val padding = with(density) { 8.dp.toPx() }
             Rect(
                 left = it.left - padding,
@@ -72,6 +80,9 @@ fun TutorialOverlay(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .onGloballyPositioned { layoutCoordinates ->
+                overlayOffset = layoutCoordinates.positionInRoot()
+            }
             .graphicsLayer(alpha = 0.99f) // Required for BlendMode.Clear to work on Canvas
     ) {
         // Dimmed Background with Hole
@@ -230,9 +241,9 @@ fun Modifier.tutorialSpotlight(
     key: String,
     viewModel: TutorialViewModel
 ): Modifier = this.onGloballyPositioned { layoutCoordinates ->
-    // Use positionInWindow to get absolute screen coordinates for better alignment
+    // Use positionInRoot to get coordinates relative to the Compose root
     val rect = Rect(
-        offset = layoutCoordinates.positionInWindow(),
+        offset = layoutCoordinates.positionInRoot(),
         size = layoutCoordinates.size.toSize()
     )
     viewModel.updateSpotlight(key, rect)
