@@ -243,12 +243,17 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Statistics state
-    val appStatistics = combine(activeItems, spaces, categories) { items, spacesList, categoriesList ->
+    val appStatistics = combine(
+        activeItems, 
+        spaces, 
+        categories,
+        trashItems
+    ) { items, spacesList, categoriesList, trashItemsList ->
         val totalCount = items.size
         val spacesCount = spacesList.size
         val categoriesCount = categoriesList.size
         val favoritesCount = items.count { it.item.isFavorite }
-        val trashCount = db.appDao().getLiveTrashItems().first().size // fallback query
+        val trashCount = trashItemsList.size
         Stats(totalCount, spacesCount, categoriesCount, favoritesCount, trashCount)
     }.stateIn(
         viewModelScope,

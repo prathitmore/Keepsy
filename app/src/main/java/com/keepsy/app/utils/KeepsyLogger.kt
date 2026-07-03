@@ -14,9 +14,9 @@ object KeepsyLogger {
 
     private fun getCrashlytics(): FirebaseCrashlytics? {
         return try {
-            // Use a safer check that doesn't rely oncom.keepsy.app.KeepsyApplication.instance
-            // which might not be initialized yet during early logging calls
-            if (FirebaseApp.getApps(com.keepsy.app.KeepsyApplication.instance).isNotEmpty()) {
+            // Safely check if the application instance exists before using it
+            val context = try { com.keepsy.app.KeepsyApplication.instance } catch (e: Exception) { null }
+            if (context != null && FirebaseApp.getApps(context).isNotEmpty()) {
                 FirebaseCrashlytics.getInstance()
             } else {
                 null

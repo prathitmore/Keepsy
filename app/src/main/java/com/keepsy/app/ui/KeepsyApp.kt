@@ -23,7 +23,6 @@ import com.keepsy.app.ui.tutorial.TutorialViewModel
 import com.keepsy.app.viewmodel.KeepsyViewModel
 import com.keepsy.app.utils.KeepsyLogger
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first

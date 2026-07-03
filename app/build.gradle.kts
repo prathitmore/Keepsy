@@ -10,7 +10,7 @@ plugins {
 
 android {
   namespace = "com.keepsy.app"
-  compileSdk { version = release(36) { minorApiLevel = 1 } }
+  compileSdk = 36
 
   defaultConfig {
     applicationId = "com.keepsy.app"
@@ -52,11 +52,9 @@ android {
 
   buildTypes {
     release {
-      isCrunchPngs = true
       isMinifyEnabled = false
       isShrinkResources = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      // Use debug signing for now so the APK is runnable
       signingConfig = signingConfigs.getByName("debugConfig")
     }
     debug {
