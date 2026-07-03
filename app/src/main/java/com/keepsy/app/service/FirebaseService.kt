@@ -26,7 +26,8 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
                 name = it.displayName,
                 email = it.email,
                 photoUrl = it.photoUrl?.toString(),
-                isAnonymous = it.isAnonymous
+                isAnonymous = it.isAnonymous,
+                isEmailVerified = it.isEmailVerified
             )
         }
     }
@@ -42,7 +43,8 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
                 name = firebaseUser.displayName,
                 email = firebaseUser.email,
                 photoUrl = firebaseUser.photoUrl?.toString(),
-                isAnonymous = firebaseUser.isAnonymous
+                isAnonymous = firebaseUser.isAnonymous,
+                isEmailVerified = firebaseUser.isEmailVerified
             )
             updateUserProfile(user)
             logEvent("login", "email")
@@ -74,7 +76,8 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
                 email = firebaseUser.email,
                 photoUrl = firebaseUser.photoUrl?.toString(),
                 isAnonymous = firebaseUser.isAnonymous,
-                createdAt = System.currentTimeMillis()
+                createdAt = System.currentTimeMillis(),
+                isEmailVerified = firebaseUser.isEmailVerified
             )
             updateUserProfile(user, isNewUser = true)
             logEvent("sign_up", "email")
@@ -108,7 +111,8 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
                 name = firebaseUser.displayName,
                 email = firebaseUser.email,
                 photoUrl = firebaseUser.photoUrl?.toString(),
-                isAnonymous = firebaseUser.isAnonymous
+                isAnonymous = firebaseUser.isAnonymous,
+                isEmailVerified = firebaseUser.isEmailVerified
             )
             updateUserProfile(user)
             logEvent("login", "google")
@@ -185,7 +189,8 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
                     name = it.displayName,
                     email = it.email,
                     photoUrl = it.photoUrl?.toString(),
-                    isAnonymous = it.isAnonymous
+                    isAnonymous = it.isAnonymous,
+                    isEmailVerified = it.isEmailVerified
                 )
             }
             KeepsyLogger.d("authStateListener: ${user?.uid ?: "no user"}")

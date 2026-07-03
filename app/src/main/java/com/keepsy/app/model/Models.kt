@@ -26,7 +26,8 @@ data class User(
     val lastLogin: Long? = null,
     val appVersion: String? = null,
     val platform: String = "Android",
-    val isAnonymous: Boolean = false
+    val isAnonymous: Boolean = false,
+    val isEmailVerified: Boolean = false
 )
 
 sealed class AuthState {

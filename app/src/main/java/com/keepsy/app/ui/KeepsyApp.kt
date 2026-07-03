@@ -74,10 +74,10 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
         when (authState) {
             is AuthState.Authenticated -> {
                 val user = (authState as AuthState.Authenticated).user
-                KeepsyLogger.i("KeepsyApp: User authenticated: ${user.uid}")
+                KeepsyLogger.i("KeepsyApp: User authenticated: ${user.uid}, Verified: ${user.isEmailVerified}")
                 
                 // 1. Check if email is verified
-                if (!viewModel.isEmailVerified()) {
+                if (!user.isEmailVerified) {
                     KeepsyLogger.i("KeepsyApp: Email not verified, showing verification screen")
                     appScreen = Screen.VerifyEmail
                 } else {
