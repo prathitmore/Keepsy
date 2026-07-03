@@ -1,6 +1,7 @@
 package com.keepsy.app.utils
 
 import android.content.Context
+import com.google.firebase.FirebaseApp
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 /**
@@ -16,10 +17,12 @@ class GlobalCrashHandler(
         try {
             KeepsyLogger.e("CRITICAL UNCAUGHT EXCEPTION on thread ${thread.name}", throwable)
             
-            // Explicitly record to Crashlytics
-            FirebaseCrashlytics.getInstance().apply {
-                setCustomKey("thread_name", thread.name)
-                recordException(throwable)
+            // Check if Firebase is initialized before recording
+            if (FirebaseApp.getApps(context).isNotEmpty()) {
+                FirebaseCrashlytics.getInstance().apply {
+                    setCustomKey("thread_name", thread.name)
+                    recordException(throwable)
+                }
             }
         } catch (e: Exception) {
             // Avoid infinite loops

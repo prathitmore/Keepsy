@@ -2,6 +2,7 @@ package com.keepsy.app.utils
 
 import android.util.Log
 import com.keepsy.app.BuildConfig
+import com.google.firebase.FirebaseApp
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 /**
@@ -10,30 +11,45 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics
  */
 object KeepsyLogger {
     private const val TAG = "Keepsy"
-    private val crashlytics = FirebaseCrashlytics.getInstance()
+
+    private fun getCrashlytics(): FirebaseCrashlytics? {
+        return try {
+            // Use a safer check that doesn't rely oncom.keepsy.app.KeepsyApplication.instance
+            // which might not be initialized yet during early logging calls
+            if (FirebaseApp.getApps(com.keepsy.app.KeepsyApplication.instance).isNotEmpty()) {
+                FirebaseCrashlytics.getInstance()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     fun d(message: String) {
         if (BuildConfig.DEBUG) {
             Log.d(TAG, message)
         }
-        crashlytics.log("DEBUG: $message")
+        getCrashlytics()?.log("DEBUG: $message")
     }
 
     fun e(message: String, throwable: Throwable? = null) {
         Log.e(TAG, message, throwable)
-        crashlytics.log("ERROR: $message")
-        throwable?.let { crashlytics.recordException(it) }
+        getCrashlytics()?.apply {
+            log("ERROR: $message")
+            throwable?.let { recordException(it) }
+        }
     }
 
     fun i(message: String) {
         if (BuildConfig.DEBUG) {
             Log.i(TAG, message)
         }
-        crashlytics.log("INFO: $message")
+        getCrashlytics()?.log("INFO: $message")
     }
 
     fun w(message: String) {
         Log.w(TAG, message)
-        crashlytics.log("WARN: $message")
+        getCrashlytics()?.log("WARN: $message")
     }
 }
