@@ -53,17 +53,14 @@ android {
   buildTypes {
     release {
       isCrunchPngs = true
-      isMinifyEnabled = true
-      isShrinkResources = true
+      isMinifyEnabled = false
+      isShrinkResources = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      signingConfig = signingConfigs.getByName("release")
+      // Use debug signing for now so the APK is runnable
+      signingConfig = signingConfigs.getByName("debugConfig")
     }
     debug {
-      signingConfigs.findByName("debugConfig")?.let { config ->
-        if (config.storeFile?.exists() == true) {
-          signingConfig = config
-        }
-      }
+      signingConfig = signingConfigs.getByName("debugConfig")
     }
   }
   compileOptions {
