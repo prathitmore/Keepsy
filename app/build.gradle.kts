@@ -96,6 +96,7 @@ dependencies {
   implementation(libs.firebase.crashlytics)
   implementation(libs.androidx.credentials)
   implementation(libs.androidx.credentials.play.services.auth)
+
   implementation(libs.androidx.security.crypto)
   implementation(libs.googleid)
   // implementation(libs.accompanist.permissions)

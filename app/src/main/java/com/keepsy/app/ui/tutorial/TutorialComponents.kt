@@ -4,6 +4,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,20 +14,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.border
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
@@ -44,62 +43,97 @@ fun TutorialOverlay(
     
     if (!isVisible) return
 
-    val currentRect = currentStep.spotlightKey?.let { spotlights[it] }
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenHeightPx = with(density) { config.screenHeightDp.dp.toPx() }
+
+    val rawRect = currentStep.spotlightKey?.let { spotlights[it] }
+    
+    // Add 8dp padding around the spotlight for "breathing room"
+    val inflatedRect = remember(rawRect) {
+        rawRect?.let {
+            val padding = with(density) { 8.dp.toPx() }
+            Rect(
+                left = it.left - padding,
+                top = it.top - padding,
+                right = it.right + padding,
+                bottom = it.bottom + padding
+            )
+        }
+    }
+
+    // Animate the spotlight transition
+    val animatedRect by animateRectAsState(
+        targetValue = inflatedRect ?: Rect(0f, 0f, 0f, 0f),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
+        label = "spotlight_rect"
+    )
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .graphicsLayer(alpha = 0.99f) // Required for BlendMode.Clear
+            .graphicsLayer(alpha = 0.99f) // Required for BlendMode.Clear to work on Canvas
     ) {
         // Dimmed Background with Hole
         Canvas(modifier = Modifier
             .fillMaxSize()
             .clickable(enabled = false) {}
         ) {
-            drawRect(color = Color.Black.copy(alpha = 0.8f))
+            drawRect(color = Color.Black.copy(alpha = 0.65f)) // Lighter dim for visibility
             
-            if (currentRect != null) {
+            if (inflatedRect != null) {
                 drawRoundRect(
                     color = Color.Transparent,
-                    topLeft = currentRect.topLeft,
-                    size = currentRect.size,
+                    topLeft = animatedRect.topLeft,
+                    size = animatedRect.size,
                     cornerRadius = CornerRadius(16.dp.toPx(), 16.dp.toPx()),
                     blendMode = BlendMode.Clear
                 )
             }
         }
         
-        // Spotlight Border Glow
-        if (currentRect != null) {
+        // Spotlight Border & Glow
+        if (inflatedRect != null) {
             Box(
                 modifier = Modifier
                     .offset(
-                        x = with(LocalDensity.current) { currentRect.left.toDp() },
-                        y = with(LocalDensity.current) { currentRect.top.toDp() }
+                        x = with(density) { animatedRect.left.toDp() },
+                        y = with(density) { animatedRect.top.toDp() }
                     )
                     .size(
-                        width = with(LocalDensity.current) { currentRect.width.toDp() },
-                        height = with(LocalDensity.current) { currentRect.height.toDp() }
+                        width = with(density) { animatedRect.width.toDp() },
+                        height = with(density) { animatedRect.height.toDp() }
                     )
-                    .border(2.dp, PrimaryAccent, RoundedCornerShape(16.dp))
+                    .border(2.dp, PrimaryAccent.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
                     .graphicsLayer {
-                        shadowElevation = 20.dp.toPx()
+                        shadowElevation = 15.dp.toPx()
                         shape = RoundedCornerShape(16.dp)
-                        clip = false
                     }
             )
         }
 
-        // Help Bubble
-        TutorialBubble(
-            step = currentStep,
-            onNext = { viewModel.nextStep() },
-            onSkip = { viewModel.skipTutorial() },
+        // Smarter Bubble Placement Logic
+        val isTargetInTopHalf = inflatedRect?.let { it.center.y < screenHeightPx / 2 } ?: true
+        val bubbleAlignment = if (isTargetInTopHalf) Alignment.BottomCenter else Alignment.TopCenter
+        val bubblePadding = if (isTargetInTopHalf) PaddingValues(bottom = 120.dp) else PaddingValues(top = 80.dp)
+
+        AnimatedContent(
+            targetState = currentStep,
+            transitionSpec = {
+                (fadeIn() + slideInHorizontally { it / 2 }).togetherWith(fadeOut() + slideOutHorizontally { -it / 2 })
+            },
             modifier = Modifier
-                .align(if (currentRect == null || currentRect.top > 400) Alignment.TopCenter else Alignment.BottomCenter)
+                .align(bubbleAlignment)
                 .padding(24.dp)
-                .padding(top = 40.dp, bottom = 100.dp)
-        )
+                .padding(bubblePadding),
+            label = "bubble_transition"
+        ) { step ->
+            TutorialBubble(
+                step = step,
+                onNext = { viewModel.nextStep() },
+                onSkip = { viewModel.skipTutorial() }
+            )
+        }
     }
 }
 
@@ -114,12 +148,12 @@ fun TutorialBubble(
         modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.elevatedCardColors(containerColor = SurfaceSecondary),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 12.dp)
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 16.dp)
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             val stepIcon = when (step) {
@@ -137,20 +171,20 @@ fun TutorialBubble(
 
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(PrimaryPurple.copy(alpha = 0.1f)),
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(PrimaryPurple.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = stepIcon,
                     contentDescription = null,
                     tint = PrimaryPurple,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(32.dp)
                 )
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             
             Text(
                 text = step.title,
@@ -160,17 +194,18 @@ fun TutorialBubble(
                 textAlign = TextAlign.Center
             )
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             
             Text(
                 text = step.description,
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary,
                 textAlign = TextAlign.Center,
-                lineHeight = 22.sp
+                lineHeight = 22.sp,
+                modifier = Modifier.padding(horizontal = 8.dp)
             )
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(28.dp))
             
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -178,13 +213,13 @@ fun TutorialBubble(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = onSkip) {
-                    Text("Skip", color = TextSecondary)
+                    Text("Skip Tour", color = TextSecondary, fontWeight = FontWeight.Medium)
                 }
                 
                 PrimaryGradientButton(
-                    text = if (step == TutorialStep.COMPLETION) "Start Using Keepsy" else "Next",
+                    text = if (step == TutorialStep.COMPLETION) "Start Organizing" else "Next Step",
                     onClick = onNext,
-                    modifier = Modifier.width(if (step == TutorialStep.COMPLETION) 200.dp else 100.dp)
+                    modifier = Modifier.width(if (step == TutorialStep.COMPLETION) 180.dp else 120.dp)
                 )
             }
         }
@@ -195,9 +230,30 @@ fun Modifier.tutorialSpotlight(
     key: String,
     viewModel: TutorialViewModel
 ): Modifier = this.onGloballyPositioned { layoutCoordinates ->
+    // Use positionInWindow to get absolute screen coordinates for better alignment
     val rect = Rect(
-        offset = layoutCoordinates.positionInRoot(),
+        offset = layoutCoordinates.positionInWindow(),
         size = layoutCoordinates.size.toSize()
     )
     viewModel.updateSpotlight(key, rect)
 }
+
+@Composable
+fun animateRectAsState(
+    targetValue: Rect,
+    animationSpec: AnimationSpec<Rect> = spring(),
+    label: String = "RectAnimation"
+): State<Rect> {
+    return animateValueAsState(
+        targetValue = targetValue,
+        typeConverter = Rect.VectorConverter,
+        animationSpec = animationSpec,
+        label = label
+    )
+}
+
+private val Rect.Companion.VectorConverter: TwoWayConverter<Rect, AnimationVector4D>
+    get() = TwoWayConverter(
+        convertToVector = { AnimationVector4D(it.left, it.top, it.right, it.bottom) },
+        convertFromVector = { Rect(it.v1, it.v2, it.v3, it.v4) }
+    )
