@@ -49,7 +49,23 @@ fun TutorialScreen(
         }
     }
 
-    // Force navigation based on tutorial step
+    // Interactive Step Monitoring
+    val spacesList by viewModel.spaces.collectAsState(emptyList())
+    val itemsList by viewModel.activeItems.collectAsState(emptyList())
+
+    LaunchedEffect(spacesList.size) {
+        if (currentStep == TutorialStep.SPACE_INTRO && spacesList.isNotEmpty()) {
+            tutorialViewModel.nextStep()
+        }
+    }
+
+    LaunchedEffect(itemsList.size) {
+        if (currentStep == TutorialStep.ITEM_INTRO && itemsList.isNotEmpty()) {
+            tutorialViewModel.nextStep()
+        }
+    }
+
+    // Automatic Navigation based on Steps
     LaunchedEffect(currentStep) {
         when (currentStep) {
             TutorialStep.INTERFACE_OVERVIEW -> {
@@ -61,13 +77,16 @@ fun TutorialScreen(
                 subScreenHistory.clear()
             }
             TutorialStep.SUBSPACE_INTRO -> {
-                // Auto-navigate into the first space created
-                val spacesList = viewModel.spaces.first()
-                val firstSpace = spacesList.firstOrNull()
+                // Find the first space to add a subspace into
+                val firstSpace = viewModel.spaces.first().firstOrNull()
                 if (firstSpace != null) {
                     currentTab = TabScreen.Spaces
                     subScreenHistory.clear()
                     subScreenHistory.add(SubScreen.SpaceDetails(firstSpace.spaceId))
+                } else {
+                    // Fallback: stay on spaces tab if no space exists yet
+                    currentTab = TabScreen.Spaces
+                    subScreenHistory.clear()
                 }
             }
             TutorialStep.ITEM_INTRO -> {
@@ -79,22 +98,6 @@ fun TutorialScreen(
                 subScreenHistory.clear()
             }
             else -> {}
-        }
-    }
-
-    // Auto-advance logic for interactive steps
-    val spacesList by viewModel.spaces.collectAsState(emptyList())
-    val itemsList by viewModel.activeItems.collectAsState(emptyList())
-    
-    LaunchedEffect(spacesList.size) {
-        if (currentStep == TutorialStep.SPACE_INTRO && spacesList.isNotEmpty()) {
-            tutorialViewModel.nextStep()
-        }
-    }
-    
-    LaunchedEffect(itemsList.size) {
-        if (currentStep == TutorialStep.ITEM_INTRO && itemsList.isNotEmpty()) {
-            tutorialViewModel.nextStep()
         }
     }
 
@@ -119,18 +122,18 @@ fun TutorialScreen(
             if (currentStep == TutorialStep.WELCOME) {
                 TutorialSlide(
                     icon = Icons.Default.WavingHand,
-                    title = "Let's Show You Around",
-                    description = "We'll quickly guide you through how Keepsy helps you remember where you keep everything.",
-                    buttonText = "Start Tutorial",
+                    title = "Organize Your World",
+                    description = "We'll show you how to remember where you've kept everything in 3 interactive steps.",
+                    buttonText = "Start Interactive Tour",
                     onButtonClick = { tutorialViewModel.nextStep() },
                     onSkip = { tutorialViewModel.skipTutorial() }
                 )
-            } else if (currentStep == TutorialStep.COMPLETION) {
+            } else {
                 TutorialSlide(
                     icon = Icons.Default.CheckCircle,
                     title = "You're All Set!",
-                    description = "You've mastered the basics. You're ready to start your organized life.",
-                    buttonText = "Start Using Keepsy",
+                    description = "You've successfully learned how to use Spaces, Subspaces, and Items. You're ready to launch!",
+                    buttonText = "Enter Dashboard",
                     onButtonClick = { tutorialViewModel.nextStep() },
                     onSkip = { tutorialViewModel.skipTutorial() },
                     showSummary = true
@@ -202,10 +205,10 @@ fun TutorialSlide(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                SummaryItem("Created your first Space")
-                SummaryItem("Learned Subspaces")
-                SummaryItem("Added your first Item")
-                SummaryItem("Learned Search & History")
+                SummaryItem("Created your first Space (Home)")
+                SummaryItem("Nested a Subspace (Bedroom)")
+                SummaryItem("Saved a physical Item (Car Keys)")
+                SummaryItem("Mastered Retrieval & Search")
             }
         }
         
@@ -219,7 +222,7 @@ fun TutorialSlide(
         Spacer(modifier = Modifier.height(16.dp))
         
         TextButton(onClick = onSkip) {
-            Text("Skip and Go to Dashboard", color = TextSecondary)
+            Text("Skip and Go to Dashboard", color = TextSecondary, fontWeight = FontWeight.Medium)
         }
     }
 }

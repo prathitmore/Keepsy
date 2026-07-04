@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -21,8 +22,10 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -32,13 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
 import com.keepsy.app.ui.components.PrimaryGradientButton
 import com.keepsy.app.ui.theme.*
-
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.graphics.StrokeCap
 import com.keepsy.app.utils.KeepsyLogger
-
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 
 @Composable
 fun TutorialOverlay(
@@ -55,13 +52,21 @@ fun TutorialOverlay(
     val config = LocalConfiguration.current
     val screenHeightPx = with(density) { config.screenHeightDp.dp.toPx() }
 
+    // Track the overlay's own position to calculate relative offsets
+    var overlayOffset by remember { mutableStateOf(Offset.Zero) }
+
     val rawRect = currentStep.spotlightKey?.let { spotlights[it] }
     
-    // Add 8dp padding around the spotlight for "breathing room"
-    val inflatedRect = remember(rawRect) {
-        rawRect?.let {
+    // Calculate the rect relative to THIS overlay Box
+    val relativeRect = remember(rawRect, overlayOffset) {
+        rawRect?.translate(-overlayOffset)
+    }
+
+    // Add padding around the spotlight
+    val inflatedRect = remember(relativeRect) {
+        relativeRect?.let {
             if (it.width <= 0 || it.height <= 0) return@let null
-            val padding = with(density) { 8.dp.toPx() }
+            val padding = with(density) { 10.dp.toPx() }
             Rect(
                 left = it.left - padding,
                 top = it.top - padding,
@@ -71,7 +76,7 @@ fun TutorialOverlay(
         }
     }
 
-    // Animate the spotlight transition safely
+    // Animate the spotlight transition smoothly
     val animatedRect by animateRectAsState(
         targetValue = inflatedRect ?: Rect(0f, 0f, 1f, 1f),
         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
@@ -81,29 +86,27 @@ fun TutorialOverlay(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .graphicsLayer(alpha = 0.99f) // Required for BlendMode.Clear to work on Canvas
+            .onGloballyPositioned { overlayOffset = it.positionInWindow() }
+            .graphicsLayer(alpha = 0.99f) // Required for BlendMode.Clear
             .pointerInput(animatedRect) {
-                // Intercept touches but let them through if they are inside the hole
+                // Intercept touches: allow if inside spotlight, block otherwise
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         val position = event.changes.first().position
                         if (animatedRect.contains(position)) {
-                            // Let the click pass through to the real UI
+                            // User is interacting with the real UI element
                         } else {
-                            // Block the click
+                            // Block interaction with the rest of the UI
                             event.changes.forEach { it.consume() }
                         }
                     }
                 }
             }
     ) {
-        // Dimmed Background with Hole
-        Canvas(modifier = Modifier
-            .fillMaxSize()
-            .clickable(enabled = false) {}
-        ) {
-            drawRect(color = Color.Black.copy(alpha = 0.65f)) // Lighter dim for visibility
+        // 1. Dimmed Background with Hole
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawRect(color = Color.Black.copy(alpha = 0.7f))
             
             if (inflatedRect != null && !animatedRect.isEmpty) {
                 try {
@@ -128,17 +131,17 @@ fun TutorialOverlay(
                         )
                     }
                 } catch (e: Exception) {
-                    // Silently fail on drawing issues
+                    KeepsyLogger.w("Canvas draw issue: ${e.message}")
                 }
             }
         }
         
-        // Spotlight Border & Glow
+        // 2. Animated Border & Arrow
         if (inflatedRect != null && !animatedRect.isEmpty) {
             val key = currentStep.spotlightKey ?: ""
             val isCircular = key.contains("fab") || key.contains("tab")
             
-            val infiniteTransition = rememberInfiniteTransition(label = "arrow")
+            val infiniteTransition = rememberInfiniteTransition(label = "bounce")
             val arrowBounce by infiniteTransition.animateFloat(
                 initialValue = 0f,
                 targetValue = 15f,
@@ -149,6 +152,7 @@ fun TutorialOverlay(
                 label = "bounce"
             )
 
+            // Border
             Box(
                 modifier = Modifier
                     .offset(
@@ -159,29 +163,21 @@ fun TutorialOverlay(
                         width = with(density) { (if (isCircular) maxOf(animatedRect.width, animatedRect.height) else animatedRect.width).toDp() },
                         height = with(density) { (if (isCircular) maxOf(animatedRect.width, animatedRect.height) else animatedRect.height).toDp() }
                     )
-                    .border(
-                        width = 2.dp, 
-                        color = PrimaryAccent.copy(alpha = 0.5f), 
-                        shape = if (isCircular) CircleShape else RoundedCornerShape(16.dp)
-                    )
-                    .graphicsLayer {
-                        shadowElevation = 15.dp.toPx()
-                        shape = if (isCircular) CircleShape else RoundedCornerShape(16.dp)
-                    }
+                    .border(2.dp, PrimaryAccent, if (isCircular) CircleShape else RoundedCornerShape(16.dp))
             )
 
-            // Animated Arrow
-            val isTargetInBottom = animatedRect.center.y > screenHeightPx / 2
+            // Arrow
+            val isTargetInBottomHalf = animatedRect.center.y > screenHeightPx / 2
             Icon(
-                imageVector = if (isTargetInBottom) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
+                imageVector = if (isTargetInBottomHalf) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
                 contentDescription = null,
                 tint = PrimaryAccent,
                 modifier = Modifier
                     .offset(
                         x = with(density) { (animatedRect.center.x - 12.dp.toPx()).toDp() },
                         y = with(density) { 
-                            if (isTargetInBottom) 
-                                (animatedRect.top - 40f - arrowBounce).toDp()
+                            if (isTargetInBottomHalf) 
+                                (animatedRect.top - 45f - arrowBounce).toDp()
                             else 
                                 (animatedRect.bottom + 10f + arrowBounce).toDp()
                         }
@@ -190,10 +186,10 @@ fun TutorialOverlay(
             )
         }
 
-        // Smarter Bubble Placement Logic
+        // 3. Tutorial Bubble
         val isTargetInTopHalf = inflatedRect?.let { it.center.y < screenHeightPx / 2 } ?: true
         val bubbleAlignment = if (isTargetInTopHalf) Alignment.BottomCenter else Alignment.TopCenter
-        val bubblePadding = if (isTargetInTopHalf) PaddingValues(bottom = 120.dp) else PaddingValues(top = 80.dp)
+        val bubblePadding = if (isTargetInTopHalf) PaddingValues(bottom = 140.dp) else PaddingValues(top = 100.dp)
 
         AnimatedContent(
             targetState = currentStep,
@@ -204,7 +200,7 @@ fun TutorialOverlay(
                 .align(bubbleAlignment)
                 .padding(24.dp)
                 .padding(bubblePadding),
-            label = "bubble_transition"
+            label = "bubble"
         ) { step ->
             TutorialBubble(
                 step = step,
@@ -228,7 +224,7 @@ fun TutorialBubble(
             .wrapContentHeight(),
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.elevatedCardColors(containerColor = SurfaceSecondary),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 16.dp)
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 20.dp)
     ) {
         Column(
             modifier = Modifier.padding(24.dp),
@@ -276,8 +272,7 @@ fun TutorialBubble(
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary,
                 textAlign = TextAlign.Center,
-                lineHeight = 22.sp,
-                modifier = Modifier.padding(horizontal = 8.dp)
+                lineHeight = 22.sp
             )
             
             Spacer(modifier = Modifier.height(28.dp))
@@ -292,9 +287,9 @@ fun TutorialBubble(
                 }
                 
                 PrimaryGradientButton(
-                    text = if (step == TutorialStep.COMPLETION) "Start Organizing" else "Next Step",
+                    text = if (step == TutorialStep.COMPLETION) "Finish" else "Next Step",
                     onClick = onNext,
-                    modifier = Modifier.width(if (step == TutorialStep.COMPLETION) 180.dp else 120.dp)
+                    modifier = Modifier.width(if (step == TutorialStep.COMPLETION) 160.dp else 120.dp)
                 )
             }
         }
@@ -308,12 +303,10 @@ fun Modifier.tutorialSpotlight(
     try {
         if (layoutCoordinates.isAttached) {
             val rect = Rect(
-                offset = layoutCoordinates.positionInRoot(),
+                offset = layoutCoordinates.positionInWindow(),
                 size = layoutCoordinates.size.toSize()
             )
-            // Ensure no invalid numbers go to the flow
             if (!rect.left.isNaN() && !rect.top.isNaN()) {
-                KeepsyLogger.d("Spotlight [$key]: $rect")
                 viewModel.updateSpotlight(key, rect)
             }
         }

@@ -1,49 +1,41 @@
 package com.keepsy.app.ui.tutorial
 
-import androidx.compose.ui.geometry.Rect
-
 enum class TutorialStep(
     val title: String,
     val description: String,
-    val spotlightKey: String? = null,
-    val isInteractive: Boolean = false
+    val spotlightKey: String? = null
 ) {
     WELCOME(
         "Welcome to Keepsy",
-        "Let's learn how to organize your world and never lose anything again."
+        "Let's learn how to organize your world in 3 simple steps."
     ),
     INTERFACE_OVERVIEW(
         "The Dashboard",
-        "This is your command center. You can see your recent items and total inventory at a glance.",
+        "This is your home base. You can see your recent items and total inventory at a glance.",
         "home_tab"
     ),
     SPACE_INTRO(
         "Step 1: Create a Space",
-        "Tap the '+' button to create your first space, like 'Home'. Spaces are physical locations.",
+        "Spaces are the places where you keep things. Tap the '+' button in the Spaces tab to create your first space, like 'Home'.",
         "add_space_fab"
     ),
     SUBSPACE_INTRO(
         "Step 2: Add a Subspace",
-        "Inside 'Home', you can add 'Bedroom'. Nesting helps you know exactly where things are.",
+        "Inside 'Home', you can add a 'Bedroom'. Nesting spaces helps you stay precise about where things are.",
         "add_subspace_btn"
     ),
     ITEM_INTRO(
         "Step 3: Save an Item",
-        "Now add an item like 'Car Keys' into your 'Bedroom'. Add a photo to remember it visually!",
+        "Now, let's save your first item, like 'Car Keys', into your 'Bedroom'.",
         "add_item_fab"
     ),
     RETRIEVAL_INTRO(
-        "Find Anything Instantly",
-        "When you need your 'Car Keys', just search for them. Keepsy will lead you straight to the Bedroom.",
+        "Instant Search",
+        "When you need something, just search for it! Keepsy will show you the exact spot instantly.",
         "search_bar"
     ),
     COMPLETION(
-        "Launch Ready!",
-        "You're all set to organize your life. Start tracking your belongings now!"
+        "You're Ready!",
+        "You've mastered the fundamentals. Welcome to an organized life!"
     )
 }
-
-data class SpotlightInfo(
-    val rect: Rect,
-    val key: String
-)
