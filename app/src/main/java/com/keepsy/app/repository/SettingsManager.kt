@@ -50,6 +50,9 @@ class SettingsManager(private val context: Context) {
     private val _darkModePreference = MutableStateFlow<Boolean?>(null)
     val darkModePreference: StateFlow<Boolean?> = _darkModePreference
 
+    private val _lastUserId = MutableStateFlow<String?>(null)
+    val lastUserId: StateFlow<String?> = _lastUserId
+
     init {
         loadSettings()
     }
@@ -60,8 +63,18 @@ class SettingsManager(private val context: Context) {
             _isTutorialCompleted.value = prefs.getBoolean("tutorial_complete", false)
             _tutorialStep.value = prefs.getInt("tutorial_step", 0)
             _darkModePreference.value = if (prefs.contains("dark_mode")) prefs.getBoolean("dark_mode", false) else null
+            _lastUserId.value = prefs.getString("last_user_id", null)
         } catch (e: Exception) {
             KeepsyLogger.e("Failed to read settings", e)
+        }
+    }
+
+    fun setLastUserId(uid: String?) {
+        try {
+            prefs.edit().putString("last_user_id", uid).apply()
+            _lastUserId.value = uid
+        } catch (e: Exception) {
+            KeepsyLogger.e("Failed to set last user id", e)
         }
     }
 

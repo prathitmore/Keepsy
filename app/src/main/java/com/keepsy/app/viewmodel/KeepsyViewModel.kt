@@ -87,6 +87,25 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
     private val _isRefreshingVerification = MutableStateFlow(false)
     val isRefreshingVerification: StateFlow<Boolean> = _isRefreshingVerification.asStateFlow()
 
+    private suspend fun purgeLocalData() {
+        KeepsyLogger.i("Purging all local data for security identity isolation...")
+        withContext(Dispatchers.IO) {
+            try {
+                // Reset settings (onboarding, tutorial, etc)
+                settingsManager.resetSettings()
+                // Clear secure data
+                securityService.clearSecureData()
+                // Wipe DB
+                db.clearAllTables()
+                // Re-seed defaults
+                repository.seedDefaultCategoriesIfEmpty()
+                KeepsyLogger.i("Local data purge complete")
+            } catch (e: Exception) {
+                KeepsyLogger.e("Purge failed", e)
+            }
+        }
+    }
+
     fun signIn(email: String, password: String) {
         if (email.trim().isEmpty()) {
             _errorState.value = KeepsyError.AuthError("Please enter your email address.")
@@ -94,6 +113,8 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
         }
         viewModelScope.launch {
             try {
+                // Purge before sign in to ensure clean state
+                purgeLocalData()
                 repository.signInWithEmail(email, password)
             } catch (e: Exception) {
                 handleError(e)
@@ -112,6 +133,8 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
         }
         viewModelScope.launch {
             try {
+                // Purge before sign up to ensure clean state
+                purgeLocalData()
                 repository.signUpWithEmail(email, password, name)
             } catch (e: Exception) {
                 handleError(e)
@@ -122,6 +145,8 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
     fun signInWithCredential(credential: com.google.firebase.auth.AuthCredential) {
         viewModelScope.launch {
             try {
+                // Purge before credential sign in to ensure clean state
+                purgeLocalData()
                 repository.signInWithCredential(credential)
             } catch (e: Exception) {
                 handleError(e)
@@ -143,16 +168,8 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
                 // 2. Sign out from Firebase
                 repository.signOut()
                 
-                // 3. Reset local settings/onboarding immediately
-                settingsManager.resetSettings()
-
-                // 4. Clear local Room database
-                withContext(Dispatchers.IO) {
-                    db.clearAllTables()
-                }
-                
-                // 5. Re-seed default categories for the next user
-                repository.seedDefaultCategoriesIfEmpty()
+                // 3. Mandatory Security Purge
+                purgeLocalData()
                 
                 KeepsyLogger.i("Sign out complete")
                 onComplete()
@@ -338,6 +355,19 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
 
     suspend fun checkOnboardingStatus() {
         if (_isRestoringData.value) return
+        
+        val currentUid = firebaseService.getCurrentUser()?.uid
+        val lastUid = settingsManager.lastUserId.value
+        
+        // Identity Isolation Check
+        if (currentUid != null && lastUid != null && currentUid != lastUid) {
+            KeepsyLogger.w("Identity mismatch detected! Purging local data to prevent leakage.")
+            purgeLocalData()
+        }
+        
+        // Set the current identity
+        settingsManager.setLastUserId(currentUid)
+
         _isRestoringData.value = true
         try {
             // 1. Always perform initial sync to see if there's remote data
