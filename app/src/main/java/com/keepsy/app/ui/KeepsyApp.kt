@@ -70,45 +70,49 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
         if (!isSplashAnimationComplete) return@LaunchedEffect
         
         KeepsyLogger.d("KeepsyApp: AuthState changed to $authState")
-        when (authState) {
-            is AuthState.Authenticated -> {
-                val user = (authState as AuthState.Authenticated).user
-                KeepsyLogger.i("KeepsyApp: User authenticated: ${user.uid}, Verified: ${user.isEmailVerified}")
-                
-                // 1. Check if email is verified
-                if (!user.isEmailVerified) {
-                    KeepsyLogger.i("KeepsyApp: Email not verified, showing verification screen")
-                    appScreen = Screen.VerifyEmail
-                } else {
-                    // 2. Show Success screen for a brief moment to feel premium
-                    appScreen = Screen.AuthSuccess(user.name ?: user.email ?: "Friend")
-                    delay(2000) // Increased to 2 seconds for a calmer experience
+        try {
+            when (authState) {
+                is AuthState.Authenticated -> {
+                    val user = (authState as AuthState.Authenticated).user
+                    KeepsyLogger.i("KeepsyApp: User authenticated: ${user.uid}, Verified: ${user.isEmailVerified}")
                     
-                    // 3. Check cloud data and onboarding status
-                    try {
-                        viewModel.checkOnboardingStatus()
-                    } catch (e: Exception) {
-                        KeepsyLogger.e("KeepsyApp: Onboarding check failed", e)
-                    }
-
-                    if (viewModel.isOnboardingCompleted.value) {
-                        if (viewModel.isTutorialCompleted.value) {
-                            appScreen = Screen.Dashboard
-                        } else {
-                            appScreen = Screen.Tutorial
-                        }
+                    // 1. Check if email is verified
+                    if (!user.isEmailVerified) {
+                        KeepsyLogger.i("KeepsyApp: Email not verified, showing verification screen")
+                        appScreen = Screen.VerifyEmail
                     } else {
-                        appScreen = Screen.Onboarding
+                        // 2. Show Success screen for a brief moment to feel premium
+                        appScreen = Screen.AuthSuccess(user.name ?: user.email ?: "Friend")
+                        delay(2000) // Increased to 2 seconds for a calmer experience
+                        
+                        // 3. Check cloud data and onboarding status
+                        try {
+                            viewModel.checkOnboardingStatus()
+                        } catch (e: Exception) {
+                            KeepsyLogger.e("KeepsyApp: Onboarding check failed", e)
+                        }
+
+                        if (viewModel.isOnboardingCompleted.value) {
+                            if (viewModel.isTutorialCompleted.value) {
+                                appScreen = Screen.Dashboard
+                            } else {
+                                appScreen = Screen.Tutorial
+                            }
+                        } else {
+                            appScreen = Screen.Onboarding
+                        }
                     }
                 }
+                is AuthState.Unauthenticated, is AuthState.Error -> {
+                    KeepsyLogger.i("KeepsyApp: User unauthenticated or error, going to Auth")
+                    appScreen = Screen.Auth
+                }
+                else -> {
+                    // Stay on Splash or Idle
+                }
             }
-            is AuthState.Unauthenticated, is AuthState.Error -> {
-                KeepsyLogger.i("KeepsyApp: User unauthenticated or error, going to Auth")
-                appScreen = Screen.Auth
-            }
-            else -> {
-                // Stay on Splash
-            }
+        } catch (e: Exception) {
+            KeepsyLogger.e("CRITICAL ERROR in KeepsyApp Navigation", e)
         }
     }
 
