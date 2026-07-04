@@ -10,7 +10,10 @@ import com.keepsy.app.utils.KeepsyLogger
 /**
  * TutorialViewModel manages the state of the interactive tour.
  */
-class TutorialViewModel(private val settingsManager: SettingsManager) {
+class TutorialViewModel(
+    private val settingsManager: SettingsManager,
+    private val onTutorialFinished: () -> Unit = {}
+) {
 
     private val _currentStep = MutableStateFlow(TutorialStep.WELCOME)
     val currentStep: StateFlow<TutorialStep> = _currentStep.asStateFlow()
@@ -71,6 +74,7 @@ class TutorialViewModel(private val settingsManager: SettingsManager) {
         _isVisible.value = false
         settingsManager.setTutorialCompleted(true)
         settingsManager.setTutorialStep(0)
+        onTutorialFinished()
         KeepsyLogger.i("Tutorial completed")
     }
 

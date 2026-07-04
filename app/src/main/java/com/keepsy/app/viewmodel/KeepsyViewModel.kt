@@ -46,7 +46,16 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
 
     private val settingsManager = SettingsManager(application)
     
-    val tutorialViewModel = TutorialViewModel(settingsManager)
+    val tutorialViewModel = TutorialViewModel(settingsManager) {
+        // Sync tutorial completion to cloud
+        viewModelScope.launch {
+            try {
+                val data = HashMap<String, Any>()
+                data["tutorialCompleted"] = true
+                firestoreService.updateProfile(data)
+            } catch (e: Exception) { /* Non-fatal */ }
+        }
+    }
     private val backupManager = BackupManager(application, db.appDao())
     val monetizationRepository: MonetizationRepository = MonetizationProvider.getRepository(application)
 
@@ -377,19 +386,27 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
             val rootSpaces = db.appDao().getLiveSpaces().first()
             if (rootSpaces.isNotEmpty()) {
                 settingsManager.setOnboardingCompleted(true)
+                settingsManager.setTutorialCompleted(true) // Existing users with data skip tutorial
             } else {
-                // Check cloud one last time explicitly
-                val existsOnCloud = syncRepository.isUserAlreadyExistsOnCloud()
-                if (existsOnCloud) {
-                    // This shouldn't happen if syncOnLogin worked, but double check
-                    syncRepository.syncOnLogin()
-                    if (db.appDao().getLiveSpaces().first().isNotEmpty()) {
+                // Check cloud profile for tutorial status
+                val profile = firestoreService.getProfile()
+                val cloudOnboardingDone = profile?.get("onboardingCompleted") as? Boolean ?: false
+                val cloudTutorialDone = profile?.get("tutorialCompleted") as? Boolean ?: false
+                
+                if (cloudOnboardingDone) {
+                    settingsManager.setOnboardingCompleted(true)
+                    if (cloudTutorialDone) {
+                        settingsManager.setTutorialCompleted(true)
+                    }
+                } else {
+                    // Check cloud entities one last time explicitly
+                    val existsOnCloud = syncRepository.isUserAlreadyExistsOnCloud()
+                    if (existsOnCloud) {
                         settingsManager.setOnboardingCompleted(true)
+                        settingsManager.setTutorialCompleted(true)
                     } else {
                         settingsManager.setOnboardingCompleted(false)
                     }
-                } else {
-                    settingsManager.setOnboardingCompleted(false)
                 }
             }
         } catch (e: Exception) {
@@ -401,6 +418,13 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
 
     fun setOnboardingCompleted() {
         settingsManager.setOnboardingCompleted(true)
+        viewModelScope.launch {
+            try {
+                val data = HashMap<String, Any>()
+                data["onboardingCompleted"] = true
+                firestoreService.updateProfile(data)
+            } catch (e: Exception) { /* Non-fatal */ }
+        }
     }
 
     fun setDarkModePreference(dark: Boolean?) {

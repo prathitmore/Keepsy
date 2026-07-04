@@ -43,7 +43,7 @@ fun TutorialScreen(
     }
 
     LaunchedEffect(isVisible) {
-        if (!isVisible && currentStep == TutorialStep.COMPLETION) {
+        if (!isVisible) {
             onFinished()
         }
     }
@@ -65,6 +65,10 @@ fun TutorialScreen(
             }
             TutorialStep.ACTIVITY_EXPLAIN -> {
                 currentTab = TabScreen.Activity
+                subScreenHistory.clear()
+            }
+            TutorialStep.DASHBOARD_EXPLAIN -> {
+                currentTab = TabScreen.Home
                 subScreenHistory.clear()
             }
             else -> {}
