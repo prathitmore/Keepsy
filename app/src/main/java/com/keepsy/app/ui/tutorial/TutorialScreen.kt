@@ -82,8 +82,7 @@ fun TutorialScreen(
                 onPopSub = { 
                     if (subScreenHistory.isNotEmpty()) {
                         subScreenHistory.removeAt(subScreenHistory.size - 1)
-                        true
-                    } else false
+                    }
                 },
                 tutorialViewModel = tutorialViewModel
             )

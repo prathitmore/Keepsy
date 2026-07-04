@@ -8,30 +8,25 @@ import com.keepsy.app.utils.GlobalCrashHandler
 class KeepsyApplication : Application() {
 
     companion object {
-        lateinit var instance: KeepsyApplication
-            private set
+        private var _instance: KeepsyApplication? = null
+        val instance: KeepsyApplication 
+            get() = _instance ?: throw IllegalStateException("Application not yet initialized")
     }
 
     override fun onCreate() {
         super.onCreate()
-        instance = this
+        _instance = this
         
         // Initialize Global Crash Handler
         GlobalCrashHandler.initialize(this)
         
-        // Firebase is typically auto-initialized by FirebaseInitProvider.
-        // We log status to verify.
+        // Firebase initialization check
         try {
-            val apps = FirebaseApp.getApps(this)
-            if (apps.isEmpty()) {
+            if (FirebaseApp.getApps(this).isEmpty()) {
                 FirebaseApp.initializeApp(this)
-                KeepsyLogger.i("Firebase initialized manually in Application")
-            } else {
-                KeepsyLogger.i("Firebase initialized by Provider")
             }
         } catch (e: Exception) {
-            // Non-fatal logging
-            android.util.Log.e("Keepsy", "Firebase status check failed", e)
+            android.util.Log.e("Keepsy", "Firebase check failed", e)
         }
     }
 }

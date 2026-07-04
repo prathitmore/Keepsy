@@ -69,7 +69,8 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
     LaunchedEffect(authState, isSplashAnimationComplete) {
         if (!isSplashAnimationComplete) return@LaunchedEffect
         
-        KeepsyLogger.d("KeepsyApp: AuthState changed to $authState")
+        delay(300) // Small buffer for stability
+        KeepsyLogger.d("KeepsyApp: Navigating with AuthState $authState")
         try {
             when (authState) {
                 is AuthState.Authenticated -> {

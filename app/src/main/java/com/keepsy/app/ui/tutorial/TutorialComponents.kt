@@ -60,6 +60,7 @@ fun TutorialOverlay(
     // Add 8dp padding around the spotlight for "breathing room"
     val inflatedRect = remember(relativeRect) {
         relativeRect?.let {
+            if (it.width <= 0 || it.height <= 0) return@let null
             val padding = with(density) { 8.dp.toPx() }
             Rect(
                 left = it.left - padding,
@@ -70,9 +71,9 @@ fun TutorialOverlay(
         }
     }
 
-    // Animate the spotlight transition
+    // Animate the spotlight transition safely
     val animatedRect by animateRectAsState(
-        targetValue = inflatedRect ?: Rect(0f, 0f, 0f, 0f),
+        targetValue = inflatedRect ?: Rect(0f, 0f, 1f, 1f), // Ensure non-zero size
         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
         label = "spotlight_rect"
     )
@@ -81,7 +82,9 @@ fun TutorialOverlay(
         modifier = modifier
             .fillMaxSize()
             .onGloballyPositioned { layoutCoordinates ->
-                overlayOffset = layoutCoordinates.positionInRoot()
+                if (layoutCoordinates.isAttached) {
+                    overlayOffset = layoutCoordinates.positionInRoot()
+                }
             }
             .graphicsLayer(alpha = 0.99f) // Required for BlendMode.Clear to work on Canvas
     ) {
@@ -92,19 +95,23 @@ fun TutorialOverlay(
         ) {
             drawRect(color = Color.Black.copy(alpha = 0.65f)) // Lighter dim for visibility
             
-            if (inflatedRect != null) {
-                drawRoundRect(
-                    color = Color.Transparent,
-                    topLeft = animatedRect.topLeft,
-                    size = animatedRect.size,
-                    cornerRadius = CornerRadius(16.dp.toPx(), 16.dp.toPx()),
-                    blendMode = BlendMode.Clear
-                )
+            if (inflatedRect != null && !animatedRect.isEmpty) {
+                try {
+                    drawRoundRect(
+                        color = Color.Transparent,
+                        topLeft = animatedRect.topLeft,
+                        size = animatedRect.size,
+                        cornerRadius = CornerRadius(16.dp.toPx(), 16.dp.toPx()),
+                        blendMode = BlendMode.Clear
+                    )
+                } catch (e: Exception) {
+                    // Silently fail on drawing issues
+                }
             }
         }
         
         // Spotlight Border & Glow
-        if (inflatedRect != null) {
+        if (inflatedRect != null && !animatedRect.isEmpty) {
             Box(
                 modifier = Modifier
                     .offset(
@@ -241,12 +248,20 @@ fun Modifier.tutorialSpotlight(
     key: String,
     viewModel: TutorialViewModel
 ): Modifier = this.onGloballyPositioned { layoutCoordinates ->
-    // Use positionInRoot to get coordinates relative to the Compose root
-    val rect = Rect(
-        offset = layoutCoordinates.positionInRoot(),
-        size = layoutCoordinates.size.toSize()
-    )
-    viewModel.updateSpotlight(key, rect)
+    try {
+        if (layoutCoordinates.isAttached) {
+            val rect = Rect(
+                offset = layoutCoordinates.positionInRoot(),
+                size = layoutCoordinates.size.toSize()
+            )
+            // Ensure no invalid numbers go to the flow
+            if (!rect.left.isNaN() && !rect.top.isNaN()) {
+                viewModel.updateSpotlight(key, rect)
+            }
+        }
+    } catch (e: Exception) {
+        // Safe fail
+    }
 }
 
 @Composable
