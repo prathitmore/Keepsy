@@ -88,14 +88,20 @@ fun TutorialOverlay(
             .fillMaxSize()
             .onGloballyPositioned { overlayOffset = it.positionInWindow() }
             .graphicsLayer(alpha = 0.99f) // Required for BlendMode.Clear
-            .pointerInput(animatedRect) {
+            .pointerInput(animatedRect, currentStep) {
                 // Intercept touches: allow if inside spotlight, block otherwise
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         val position = event.changes.first().position
+                        
                         if (animatedRect.contains(position)) {
                             // User is interacting with the real UI element
+                            // If this step is informational, tapping the area also advances it
+                            if (currentStep.advanceOnTap) {
+                                // Delay slightly to let the click pass through first
+                                viewModel.nextStep()
+                            }
                         } else {
                             // Block interaction with the rest of the UI
                             event.changes.forEach { it.consume() }
@@ -204,7 +210,6 @@ fun TutorialOverlay(
         ) { step ->
             TutorialBubble(
                 step = step,
-                onNext = { viewModel.nextStep() },
                 onSkip = { viewModel.skipTutorial() }
             )
         }
@@ -214,7 +219,6 @@ fun TutorialOverlay(
 @Composable
 fun TutorialBubble(
     step: TutorialStep,
-    onNext: () -> Unit,
     onSkip: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -277,20 +281,8 @@ fun TutorialBubble(
             
             Spacer(modifier = Modifier.height(28.dp))
             
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(onClick = onSkip) {
-                    Text("Skip Tour", color = TextSecondary, fontWeight = FontWeight.Medium)
-                }
-                
-                PrimaryGradientButton(
-                    text = if (step == TutorialStep.COMPLETION) "Finish" else "Next Step",
-                    onClick = onNext,
-                    modifier = Modifier.width(if (step == TutorialStep.COMPLETION) 160.dp else 120.dp)
-                )
+            TextButton(onClick = onSkip, modifier = Modifier.fillMaxWidth()) {
+                Text("Skip Tour", color = TextSecondary, fontWeight = FontWeight.Medium)
             }
         }
     }
