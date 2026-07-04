@@ -8,23 +8,34 @@ import com.keepsy.app.utils.KeepsyLogger
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-class SettingsManager(context: Context) {
+class SettingsManager(private val context: Context) {
     
     private val masterKey = MasterKey.Builder(context)
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
 
-    private val prefs: SharedPreferences = try {
-        EncryptedSharedPreferences.create(
+    private var prefs: SharedPreferences = try {
+        createSecurePrefs()
+    } catch (e: Exception) {
+        KeepsyLogger.e("SettingsManager: Secure storage corruption, performing recovery", e)
+        // Recovery: Clear the underlying file if possible
+        context.getSharedPreferences("keepsy_secure_settings", Context.MODE_PRIVATE).edit().clear().apply()
+        try {
+            createSecurePrefs()
+        } catch (e2: Exception) {
+            KeepsyLogger.e("SettingsManager: Fallback to standard prefs", e2)
+            context.getSharedPreferences("keepsy_standard_settings", Context.MODE_PRIVATE)
+        }
+    }
+
+    private fun createSecurePrefs(): SharedPreferences {
+        return EncryptedSharedPreferences.create(
             context,
             "keepsy_secure_settings",
             masterKey,
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         )
-    } catch (e: Exception) {
-        KeepsyLogger.e("Failed to initialize EncryptedSharedPreferences, falling back to standard", e)
-        context.getSharedPreferences("keepsy_fallback_settings", Context.MODE_PRIVATE)
     }
 
     private val _isOnboardingCompleted = MutableStateFlow(false)
@@ -40,13 +51,17 @@ class SettingsManager(context: Context) {
     val darkModePreference: StateFlow<Boolean?> = _darkModePreference
 
     init {
+        loadSettings()
+    }
+
+    private fun loadSettings() {
         try {
             _isOnboardingCompleted.value = prefs.getBoolean("onboarding_complete", false)
             _isTutorialCompleted.value = prefs.getBoolean("tutorial_complete", false)
             _tutorialStep.value = prefs.getInt("tutorial_step", 0)
             _darkModePreference.value = if (prefs.contains("dark_mode")) prefs.getBoolean("dark_mode", false) else null
         } catch (e: Exception) {
-            KeepsyLogger.e("Failed to read settings in init", e)
+            KeepsyLogger.e("Failed to read settings", e)
         }
     }
 
@@ -97,6 +112,8 @@ class SettingsManager(context: Context) {
         try {
             prefs.edit().clear().apply()
             _isOnboardingCompleted.value = false
+            _isTutorialCompleted.value = false
+            _tutorialStep.value = 0
             _darkModePreference.value = null
         } catch (e: Exception) {
             KeepsyLogger.e("Failed to reset settings", e)
