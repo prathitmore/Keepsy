@@ -240,9 +240,9 @@ fun FloatingBottomNavigation(
 ) {
     val items = remember {
         listOf(
-            NavItem(TabScreen.Home, Icons.Default.Home),
-            NavItem(TabScreen.Spaces, Icons.Default.Layers),
-            NavItem(TabScreen.Search, Icons.Default.Search),
+            NavItem(TabScreen.Home, Icons.Default.Home, "home_tab"),
+            NavItem(TabScreen.Spaces, Icons.Default.Layers, "spaces_tab"),
+            NavItem(TabScreen.Search, Icons.Default.Search, "search_tab"),
             NavItem(TabScreen.Activity, Icons.Default.History, "activity_tab"),
             NavItem(TabScreen.Settings, Icons.Default.Settings)
         )

@@ -24,6 +24,7 @@ import com.keepsy.app.ui.components.KeepsyBackgroundEffects
 import com.keepsy.app.ui.components.PrimaryGradientButton
 import com.keepsy.app.ui.theme.*
 import com.keepsy.app.viewmodel.KeepsyViewModel
+import kotlinx.coroutines.flow.first
 
 @Composable
 fun TutorialScreen(
@@ -51,27 +52,49 @@ fun TutorialScreen(
     // Force navigation based on tutorial step
     LaunchedEffect(currentStep) {
         when (currentStep) {
-            TutorialStep.SPACES_EXPLAIN, TutorialStep.CREATE_SPACE -> {
+            TutorialStep.INTERFACE_OVERVIEW -> {
+                currentTab = TabScreen.Home
+                subScreenHistory.clear()
+            }
+            TutorialStep.SPACE_INTRO -> {
                 currentTab = TabScreen.Spaces
                 subScreenHistory.clear()
             }
-            TutorialStep.ITEMS_EXPLAIN, TutorialStep.CREATE_ITEM -> {
+            TutorialStep.SUBSPACE_INTRO -> {
+                // Auto-navigate into the first space created
+                val spacesList = viewModel.spaces.first()
+                val firstSpace = spacesList.firstOrNull()
+                if (firstSpace != null) {
+                    currentTab = TabScreen.Spaces
+                    subScreenHistory.clear()
+                    subScreenHistory.add(SubScreen.SpaceDetails(firstSpace.spaceId))
+                }
+            }
+            TutorialStep.ITEM_INTRO -> {
                 currentTab = TabScreen.Home
                 subScreenHistory.clear()
             }
-            TutorialStep.SEARCH_EXPLAIN -> {
+            TutorialStep.RETRIEVAL_INTRO -> {
                 currentTab = TabScreen.Search
                 subScreenHistory.clear()
             }
-            TutorialStep.ACTIVITY_EXPLAIN -> {
-                currentTab = TabScreen.Activity
-                subScreenHistory.clear()
-            }
-            TutorialStep.DASHBOARD_EXPLAIN -> {
-                currentTab = TabScreen.Home
-                subScreenHistory.clear()
-            }
             else -> {}
+        }
+    }
+
+    // Auto-advance logic for interactive steps
+    val spacesList by viewModel.spaces.collectAsState(emptyList())
+    val itemsList by viewModel.activeItems.collectAsState(emptyList())
+    
+    LaunchedEffect(spacesList.size) {
+        if (currentStep == TutorialStep.SPACE_INTRO && spacesList.isNotEmpty()) {
+            tutorialViewModel.nextStep()
+        }
+    }
+    
+    LaunchedEffect(itemsList.size) {
+        if (currentStep == TutorialStep.ITEM_INTRO && itemsList.isNotEmpty()) {
+            tutorialViewModel.nextStep()
         }
     }
 

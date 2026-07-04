@@ -385,28 +385,27 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
             // 2. Check if the user has a Root Space in the newly restored Room DB
             val rootSpaces = db.appDao().getLiveSpaces().first()
             if (rootSpaces.isNotEmpty()) {
+                // If they have data, they are definitely NOT a new user.
                 settingsManager.setOnboardingCompleted(true)
-                settingsManager.setTutorialCompleted(true) // Existing users with data skip tutorial
+                settingsManager.setTutorialCompleted(true)
             } else {
-                // Check cloud profile for tutorial status
+                // 3. If no local data, check Firestore profile explicitly
                 val profile = firestoreService.getProfile()
                 val cloudOnboardingDone = profile?.get("onboardingCompleted") as? Boolean ?: false
                 val cloudTutorialDone = profile?.get("tutorialCompleted") as? Boolean ?: false
                 
                 if (cloudOnboardingDone) {
                     settingsManager.setOnboardingCompleted(true)
+                    // If they finished onboarding before, but no tutorial flag, 
+                    // it depends if we want to show it. 
+                    // But if they have items (which we checked above), they skip it.
                     if (cloudTutorialDone) {
                         settingsManager.setTutorialCompleted(true)
                     }
                 } else {
-                    // Check cloud entities one last time explicitly
-                    val existsOnCloud = syncRepository.isUserAlreadyExistsOnCloud()
-                    if (existsOnCloud) {
-                        settingsManager.setOnboardingCompleted(true)
-                        settingsManager.setTutorialCompleted(true)
-                    } else {
-                        settingsManager.setOnboardingCompleted(false)
-                    }
+                    // This is a truly fresh account
+                    settingsManager.setOnboardingCompleted(false)
+                    settingsManager.setTutorialCompleted(false)
                 }
             }
         } catch (e: Exception) {

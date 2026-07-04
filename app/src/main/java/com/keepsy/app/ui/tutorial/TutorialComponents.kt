@@ -33,6 +33,13 @@ import androidx.compose.ui.unit.toSize
 import com.keepsy.app.ui.components.PrimaryGradientButton
 import com.keepsy.app.ui.theme.*
 
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.StrokeCap
+import com.keepsy.app.utils.KeepsyLogger
+
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+
 @Composable
 fun TutorialOverlay(
     viewModel: TutorialViewModel,
@@ -48,18 +55,11 @@ fun TutorialOverlay(
     val config = LocalConfiguration.current
     val screenHeightPx = with(density) { config.screenHeightDp.dp.toPx() }
 
-    var overlayOffset by remember { mutableStateOf(Offset.Zero) }
-
     val rawRect = currentStep.spotlightKey?.let { spotlights[it] }
     
-    // Translate the rect to be relative to the overlay's origin
-    val relativeRect = remember(rawRect, overlayOffset) {
-        rawRect?.translate(-overlayOffset)
-    }
-
     // Add 8dp padding around the spotlight for "breathing room"
-    val inflatedRect = remember(relativeRect) {
-        relativeRect?.let {
+    val inflatedRect = remember(rawRect) {
+        rawRect?.let {
             if (it.width <= 0 || it.height <= 0) return@let null
             val padding = with(density) { 8.dp.toPx() }
             Rect(
@@ -73,7 +73,7 @@ fun TutorialOverlay(
 
     // Animate the spotlight transition safely
     val animatedRect by animateRectAsState(
-        targetValue = inflatedRect ?: Rect(0f, 0f, 1f, 1f), // Ensure non-zero size
+        targetValue = inflatedRect ?: Rect(0f, 0f, 1f, 1f),
         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
         label = "spotlight_rect"
     )
@@ -81,12 +81,22 @@ fun TutorialOverlay(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .onGloballyPositioned { layoutCoordinates ->
-                if (layoutCoordinates.isAttached) {
-                    overlayOffset = layoutCoordinates.positionInRoot()
+            .graphicsLayer(alpha = 0.99f) // Required for BlendMode.Clear to work on Canvas
+            .pointerInput(animatedRect) {
+                // Intercept touches but let them through if they are inside the hole
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val position = event.changes.first().position
+                        if (animatedRect.contains(position)) {
+                            // Let the click pass through to the real UI
+                        } else {
+                            // Block the click
+                            event.changes.forEach { it.consume() }
+                        }
+                    }
                 }
             }
-            .graphicsLayer(alpha = 0.99f) // Required for BlendMode.Clear to work on Canvas
     ) {
         // Dimmed Background with Hole
         Canvas(modifier = Modifier
@@ -97,13 +107,26 @@ fun TutorialOverlay(
             
             if (inflatedRect != null && !animatedRect.isEmpty) {
                 try {
-                    drawRoundRect(
-                        color = Color.Transparent,
-                        topLeft = animatedRect.topLeft,
-                        size = animatedRect.size,
-                        cornerRadius = CornerRadius(16.dp.toPx(), 16.dp.toPx()),
-                        blendMode = BlendMode.Clear
-                    )
+                    val key = currentStep.spotlightKey ?: ""
+                    val isCircular = key.contains("fab") || key.contains("tab")
+                    
+                    if (isCircular) {
+                        val radius = (maxOf(animatedRect.width, animatedRect.height) / 2)
+                        drawCircle(
+                            color = Color.Transparent,
+                            center = animatedRect.center,
+                            radius = radius,
+                            blendMode = BlendMode.Clear
+                        )
+                    } else {
+                        drawRoundRect(
+                            color = Color.Transparent,
+                            topLeft = animatedRect.topLeft,
+                            size = animatedRect.size,
+                            cornerRadius = CornerRadius(16.dp.toPx(), 16.dp.toPx()),
+                            blendMode = BlendMode.Clear
+                        )
+                    }
                 } catch (e: Exception) {
                     // Silently fail on drawing issues
                 }
@@ -112,21 +135,58 @@ fun TutorialOverlay(
         
         // Spotlight Border & Glow
         if (inflatedRect != null && !animatedRect.isEmpty) {
+            val key = currentStep.spotlightKey ?: ""
+            val isCircular = key.contains("fab") || key.contains("tab")
+            
+            val infiniteTransition = rememberInfiniteTransition(label = "arrow")
+            val arrowBounce by infiniteTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = 15f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(600, easing = EaseInOutQuad),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "bounce"
+            )
+
             Box(
                 modifier = Modifier
                     .offset(
-                        x = with(density) { animatedRect.left.toDp() },
-                        y = with(density) { animatedRect.top.toDp() }
+                        x = with(density) { (if (isCircular) animatedRect.center.x - maxOf(animatedRect.width, animatedRect.height)/2 else animatedRect.left).toDp() },
+                        y = with(density) { (if (isCircular) animatedRect.center.y - maxOf(animatedRect.width, animatedRect.height)/2 else animatedRect.top).toDp() }
                     )
                     .size(
-                        width = with(density) { animatedRect.width.toDp() },
-                        height = with(density) { animatedRect.height.toDp() }
+                        width = with(density) { (if (isCircular) maxOf(animatedRect.width, animatedRect.height) else animatedRect.width).toDp() },
+                        height = with(density) { (if (isCircular) maxOf(animatedRect.width, animatedRect.height) else animatedRect.height).toDp() }
                     )
-                    .border(2.dp, PrimaryAccent.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                    .border(
+                        width = 2.dp, 
+                        color = PrimaryAccent.copy(alpha = 0.5f), 
+                        shape = if (isCircular) CircleShape else RoundedCornerShape(16.dp)
+                    )
                     .graphicsLayer {
                         shadowElevation = 15.dp.toPx()
-                        shape = RoundedCornerShape(16.dp)
+                        shape = if (isCircular) CircleShape else RoundedCornerShape(16.dp)
                     }
+            )
+
+            // Animated Arrow
+            val isTargetInBottom = animatedRect.center.y > screenHeightPx / 2
+            Icon(
+                imageVector = if (isTargetInBottom) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
+                contentDescription = null,
+                tint = PrimaryAccent,
+                modifier = Modifier
+                    .offset(
+                        x = with(density) { (animatedRect.center.x - 12.dp.toPx()).toDp() },
+                        y = with(density) { 
+                            if (isTargetInBottom) 
+                                (animatedRect.top - 40f - arrowBounce).toDp()
+                            else 
+                                (animatedRect.bottom + 10f + arrowBounce).toDp()
+                        }
+                    )
+                    .size(24.dp)
             )
         }
 
@@ -176,14 +236,11 @@ fun TutorialBubble(
         ) {
             val stepIcon = when (step) {
                 TutorialStep.WELCOME -> Icons.Default.WavingHand
-                TutorialStep.SPACES_EXPLAIN, TutorialStep.CREATE_SPACE -> Icons.Default.Layers
-                TutorialStep.SUBSPACE_EXPLAIN -> Icons.Default.AccountTree
-                TutorialStep.ITEMS_EXPLAIN, TutorialStep.CREATE_ITEM -> Icons.Default.Inventory2
-                TutorialStep.SEARCH_EXPLAIN -> Icons.Default.Search
-                TutorialStep.ITEM_DETAILS -> Icons.Default.Info
-                TutorialStep.MOVING_ITEMS -> Icons.Default.MoveUp
-                TutorialStep.ACTIVITY_EXPLAIN -> Icons.Default.History
-                TutorialStep.DASHBOARD_EXPLAIN -> Icons.Default.Dashboard
+                TutorialStep.INTERFACE_OVERVIEW -> Icons.Default.Dashboard
+                TutorialStep.SPACE_INTRO -> Icons.Default.Layers
+                TutorialStep.SUBSPACE_INTRO -> Icons.Default.AccountTree
+                TutorialStep.ITEM_INTRO -> Icons.Default.Inventory2
+                TutorialStep.RETRIEVAL_INTRO -> Icons.Default.Search
                 TutorialStep.COMPLETION -> Icons.Default.CheckCircle
             }
 
@@ -256,6 +313,7 @@ fun Modifier.tutorialSpotlight(
             )
             // Ensure no invalid numbers go to the flow
             if (!rect.left.isNaN() && !rect.top.isNaN()) {
+                KeepsyLogger.d("Spotlight [$key]: $rect")
                 viewModel.updateSpotlight(key, rect)
             }
         }
