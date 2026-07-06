@@ -78,7 +78,8 @@ fun TutorialScreen(
             }
             TutorialStep.SUBSPACE_INTRO -> {
                 // Find the first space to add a subspace into
-                val firstSpace = viewModel.spaces.first().firstOrNull()
+                val currentSpaces = viewModel.spaces.first()
+                val firstSpace = currentSpaces.firstOrNull()
                 if (firstSpace != null) {
                     currentTab = TabScreen.Spaces
                     subScreenHistory.clear()

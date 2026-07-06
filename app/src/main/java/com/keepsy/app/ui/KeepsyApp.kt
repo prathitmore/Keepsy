@@ -93,10 +93,16 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
                             KeepsyLogger.e("KeepsyApp: Onboarding check failed", e)
                         }
 
-                        if (viewModel.isOnboardingCompleted.value) {
-                            if (viewModel.isTutorialCompleted.value) {
+                        val onboardingDone = viewModel.isOnboardingCompleted.value
+                        val tutorialDone = viewModel.isTutorialCompleted.value
+                        
+                        KeepsyLogger.i("KeepsyApp: Navigation check - Onboarding: $onboardingDone, Tutorial: $tutorialDone")
+
+                        if (onboardingDone) {
+                            if (tutorialDone) {
                                 appScreen = Screen.Dashboard
                             } else {
+                                KeepsyLogger.i("KeepsyApp: Starting Tutorial for new user")
                                 appScreen = Screen.Tutorial
                             }
                         } else {

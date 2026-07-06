@@ -99,7 +99,6 @@ fun TutorialOverlay(
                             // User is interacting with the real UI element
                             // If this step is informational, tapping the area also advances it
                             if (currentStep.advanceOnTap) {
-                                // Delay slightly to let the click pass through first
                                 viewModel.nextStep()
                             }
                         } else {
@@ -110,6 +109,21 @@ fun TutorialOverlay(
                 }
             }
     ) {
+        // Skip Button - Top Right
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 40.dp, end = 24.dp),
+            contentAlignment = Alignment.TopEnd
+        ) {
+            TextButton(
+                onClick = { viewModel.skipTutorial() },
+                colors = ButtonDefaults.textButtonColors(containerColor = SurfaceSecondary.copy(alpha = 0.6f))
+            ) {
+                Text("Skip Tutorial", color = TextSecondary, fontWeight = FontWeight.Bold)
+            }
+        }
+
         // 1. Dimmed Background with Hole
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawRect(color = Color.Black.copy(alpha = 0.7f))
@@ -193,9 +207,16 @@ fun TutorialOverlay(
         }
 
         // 3. Tutorial Bubble
+        // Smarter placement: avoid the target area
         val isTargetInTopHalf = inflatedRect?.let { it.center.y < screenHeightPx / 2 } ?: true
         val bubbleAlignment = if (isTargetInTopHalf) Alignment.BottomCenter else Alignment.TopCenter
-        val bubblePadding = if (isTargetInTopHalf) PaddingValues(bottom = 140.dp) else PaddingValues(top = 100.dp)
+        
+        // Dynamic padding to avoid overlap
+        val bubblePadding = if (isTargetInTopHalf) {
+             PaddingValues(bottom = 140.dp)
+        } else {
+             PaddingValues(top = 100.dp)
+        }
 
         AnimatedContent(
             targetState = currentStep,
@@ -208,10 +229,7 @@ fun TutorialOverlay(
                 .padding(bubblePadding),
             label = "bubble"
         ) { step ->
-            TutorialBubble(
-                step = step,
-                onSkip = { viewModel.skipTutorial() }
-            )
+            TutorialBubble(step = step)
         }
     }
 }
@@ -219,7 +237,6 @@ fun TutorialOverlay(
 @Composable
 fun TutorialBubble(
     step: TutorialStep,
-    onSkip: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     ElevatedCard(
@@ -278,12 +295,6 @@ fun TutorialBubble(
                 textAlign = TextAlign.Center,
                 lineHeight = 22.sp
             )
-            
-            Spacer(modifier = Modifier.height(28.dp))
-            
-            TextButton(onClick = onSkip, modifier = Modifier.fillMaxWidth()) {
-                Text("Skip Tour", color = TextSecondary, fontWeight = FontWeight.Medium)
-            }
         }
     }
 }

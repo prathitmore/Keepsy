@@ -388,6 +388,16 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
                 // If they have data, they are definitely NOT a new user.
                 settingsManager.setOnboardingCompleted(true)
                 settingsManager.setTutorialCompleted(true)
+                
+                // Sync status to cloud just in case
+                viewModelScope.launch {
+                    try {
+                        val data = HashMap<String, Any>()
+                        data["onboardingCompleted"] = true
+                        data["tutorialCompleted"] = true
+                        firestoreService.updateProfile(data)
+                    } catch (e: Exception) { /* Non-fatal */ }
+                }
             } else {
                 // 3. If no local data, check Firestore profile explicitly
                 val profile = firestoreService.getProfile()
