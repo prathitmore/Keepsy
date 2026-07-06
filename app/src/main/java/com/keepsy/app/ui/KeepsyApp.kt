@@ -66,43 +66,35 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
         }
     }
 
-    LaunchedEffect(authState, isSplashAnimationComplete) {
+    val onboardingDone by viewModel.isOnboardingCompleted.collectAsStateWithLifecycle()
+    val tutorialDone by viewModel.isTutorialCompleted.collectAsStateWithLifecycle()
+
+    LaunchedEffect(authState, isSplashAnimationComplete, onboardingDone, tutorialDone) {
         if (!isSplashAnimationComplete) return@LaunchedEffect
         
         delay(300) // Small buffer for stability
-        KeepsyLogger.d("KeepsyApp: Navigating with AuthState $authState")
+        KeepsyLogger.d("KeepsyApp: Navigation state - Auth: $authState, Onboarding: $onboardingDone, Tutorial: $tutorialDone")
+        
         try {
             when (authState) {
                 is AuthState.Authenticated -> {
                     val user = (authState as AuthState.Authenticated).user
-                    KeepsyLogger.i("KeepsyApp: User authenticated: ${user.uid}, Verified: ${user.isEmailVerified}")
                     
                     // 1. Check if email is verified
                     if (!user.isEmailVerified) {
-                        KeepsyLogger.i("KeepsyApp: Email not verified, showing verification screen")
+                        KeepsyLogger.i("KeepsyApp: Email not verified")
                         appScreen = Screen.VerifyEmail
                     } else {
-                        // 2. Show Success screen for a brief moment to feel premium
+                        // 2. Show Success screen
                         appScreen = Screen.AuthSuccess(user.name ?: user.email ?: "Friend")
-                        delay(2000) // Increased to 2 seconds for a calmer experience
+                        delay(2000)
                         
-                        // 3. Check cloud data and onboarding status
-                        try {
-                            viewModel.checkOnboardingStatus()
-                        } catch (e: Exception) {
-                            KeepsyLogger.e("KeepsyApp: Onboarding check failed", e)
-                        }
-
-                        val onboardingDone = viewModel.isOnboardingCompleted.value
-                        val tutorialDone = viewModel.isTutorialCompleted.value
-                        
-                        KeepsyLogger.i("KeepsyApp: Navigation check - Onboarding: $onboardingDone, Tutorial: $tutorialDone")
-
+                        // 3. Navigation Decision
                         if (onboardingDone) {
                             if (tutorialDone) {
                                 appScreen = Screen.Dashboard
                             } else {
-                                KeepsyLogger.i("KeepsyApp: Starting Tutorial for new user")
+                                KeepsyLogger.i("KeepsyApp: Starting Tutorial")
                                 appScreen = Screen.Tutorial
                             }
                         } else {
@@ -111,15 +103,12 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
                     }
                 }
                 is AuthState.Unauthenticated, is AuthState.Error -> {
-                    KeepsyLogger.i("KeepsyApp: User unauthenticated or error, going to Auth")
                     appScreen = Screen.Auth
                 }
-                else -> {
-                    // Stay on Splash or Idle
-                }
+                else -> {}
             }
         } catch (e: Exception) {
-            KeepsyLogger.e("CRITICAL ERROR in KeepsyApp Navigation", e)
+            KeepsyLogger.e("Navigation error", e)
         }
     }
 
@@ -176,7 +165,8 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
                             KeepsyLogger.i("KeepsyApp: Onboarding finished")
                             viewModel.setOnboardingCompleted()
                             viewModel.manualSync()
-                            appScreen = Screen.Tutorial
+                            // No need to change appScreen manually, 
+                            // the reactive LaunchedEffect will handle it.
                         }
                     )
                     Screen.Tutorial -> TutorialScreen(

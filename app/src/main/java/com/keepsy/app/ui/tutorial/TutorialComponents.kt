@@ -22,7 +22,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
@@ -50,6 +49,7 @@ fun TutorialOverlay(
 
     val density = LocalDensity.current
     val config = LocalConfiguration.current
+    val screenWidthPx = with(density) { config.screenWidthDp.dp.toPx() }
     val screenHeightPx = with(density) { config.screenHeightDp.dp.toPx() }
 
     // Track the overlay's own position to calculate relative offsets
@@ -87,76 +87,87 @@ fun TutorialOverlay(
         modifier = modifier
             .fillMaxSize()
             .onGloballyPositioned { overlayOffset = it.positionInWindow() }
-            .graphicsLayer(alpha = 0.99f) // Required for BlendMode.Clear
-            .pointerInput(animatedRect, currentStep) {
-                // Intercept touches: allow if inside spotlight, block otherwise
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        val position = event.changes.first().position
-                        
-                        if (animatedRect.contains(position)) {
-                            // User is interacting with the real UI element
-                            // If this step is informational, tapping the area also advances it
-                            if (currentStep.advanceOnTap) {
-                                viewModel.nextStep()
-                            }
-                        } else {
-                            // Block interaction with the rest of the UI
-                            event.changes.forEach { it.consume() }
-                        }
-                    }
-                }
-            }
     ) {
-        // Skip Button - Top Right
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 40.dp, end = 24.dp),
-            contentAlignment = Alignment.TopEnd
-        ) {
-            TextButton(
-                onClick = { viewModel.skipTutorial() },
-                colors = ButtonDefaults.textButtonColors(containerColor = SurfaceSecondary.copy(alpha = 0.6f))
-            ) {
-                Text("Skip Tutorial", color = TextSecondary, fontWeight = FontWeight.Bold)
+        // --- 1. TOUCH BLOCKER SYSTEM (The most important fix) ---
+        // We use 4 boxes around the animatedRect to block touches, 
+        // leaving the hole completely empty so touches pass through to the real UI.
+        
+        if (inflatedRect != null && !animatedRect.isEmpty) {
+            val rect = animatedRect
+            
+            // Top Blocker
+            Box(modifier = Modifier
+                .offset(y = 0.dp)
+                .fillMaxWidth()
+                .height(with(density) { maxOf(0f, rect.top).toDp() })
+                .pointerInput(Unit) { awaitPointerEventScope { while(true) { awaitPointerEvent().changes.forEach { it.consume() } } } }
+            )
+            
+            // Bottom Blocker
+            Box(modifier = Modifier
+                .offset(y = with(density) { rect.bottom.toDp() })
+                .fillMaxWidth()
+                .height(with(density) { maxOf(0f, screenHeightPx - rect.bottom).toDp() })
+                .pointerInput(Unit) { awaitPointerEventScope { while(true) { awaitPointerEvent().changes.forEach { it.consume() } } } }
+            )
+            
+            // Left Blocker
+            Box(modifier = Modifier
+                .offset(x = 0.dp, y = with(density) { rect.top.toDp() })
+                .width(with(density) { maxOf(0f, rect.left).toDp() })
+                .height(with(density) { rect.height.toDp() })
+                .pointerInput(Unit) { awaitPointerEventScope { while(true) { awaitPointerEvent().changes.forEach { it.consume() } } } }
+            )
+            
+            // Right Blocker
+            Box(modifier = Modifier
+                .offset(x = with(density) { rect.right.toDp() }, y = with(density) { rect.top.toDp() })
+                .width(with(density) { maxOf(0f, screenWidthPx - rect.right).toDp() })
+                .height(with(density) { rect.height.toDp() })
+                .pointerInput(Unit) { awaitPointerEventScope { while(true) { awaitPointerEvent().changes.forEach { it.consume() } } } }
+            )
+
+            // Optional: Internal tapping for informational steps
+            if (currentStep.advanceOnTap) {
+                Box(modifier = Modifier
+                    .offset(x = with(density) { rect.left.toDp() }, y = with(density) { rect.top.toDp() })
+                    .size(with(density) { rect.width.toDp() }, with(density) { rect.height.toDp() })
+                    .clickable { viewModel.nextStep() }
+                )
             }
+        } else {
+            // If no spotlight, block everything
+            Box(modifier = Modifier.fillMaxSize().pointerInput(Unit) { awaitPointerEventScope { while(true) { awaitPointerEvent().changes.forEach { it.consume() } } } })
         }
 
-        // 1. Dimmed Background with Hole
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        // --- 2. VISUAL OVERLAY (Dimming & Glow) ---
+        Canvas(modifier = Modifier.fillMaxSize().graphicsLayer(alpha = 0.99f)) {
             drawRect(color = Color.Black.copy(alpha = 0.7f))
             
             if (inflatedRect != null && !animatedRect.isEmpty) {
-                try {
-                    val key = currentStep.spotlightKey ?: ""
-                    val isCircular = key.contains("fab") || key.contains("tab")
-                    
-                    if (isCircular) {
-                        val radius = (maxOf(animatedRect.width, animatedRect.height) / 2)
-                        drawCircle(
-                            color = Color.Transparent,
-                            center = animatedRect.center,
-                            radius = radius,
-                            blendMode = BlendMode.Clear
-                        )
-                    } else {
-                        drawRoundRect(
-                            color = Color.Transparent,
-                            topLeft = animatedRect.topLeft,
-                            size = animatedRect.size,
-                            cornerRadius = CornerRadius(16.dp.toPx(), 16.dp.toPx()),
-                            blendMode = BlendMode.Clear
-                        )
-                    }
-                } catch (e: Exception) {
-                    KeepsyLogger.w("Canvas draw issue: ${e.message}")
+                val key = currentStep.spotlightKey ?: ""
+                val isCircular = key.contains("fab") || key.contains("tab")
+                
+                if (isCircular) {
+                    drawCircle(
+                        color = Color.Transparent,
+                        center = animatedRect.center,
+                        radius = (maxOf(animatedRect.width, animatedRect.height) / 2),
+                        blendMode = BlendMode.Clear
+                    )
+                } else {
+                    drawRoundRect(
+                        color = Color.Transparent,
+                        topLeft = animatedRect.topLeft,
+                        size = animatedRect.size,
+                        cornerRadius = CornerRadius(16.dp.toPx(), 16.dp.toPx()),
+                        blendMode = BlendMode.Clear
+                    )
                 }
             }
         }
         
-        // 2. Animated Border & Arrow
+        // Animated Border & Arrow
         if (inflatedRect != null && !animatedRect.isEmpty) {
             val key = currentStep.spotlightKey ?: ""
             val isCircular = key.contains("fab") || key.contains("tab")
@@ -206,17 +217,27 @@ fun TutorialOverlay(
             )
         }
 
-        // 3. Tutorial Bubble
-        // Smarter placement: avoid the target area
+        // --- 3. UI CONTROLS ---
+        
+        // Global Skip - Top Right
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 48.dp, end = 24.dp),
+            contentAlignment = Alignment.TopEnd
+        ) {
+            TextButton(
+                onClick = { viewModel.skipTutorial() },
+                colors = ButtonDefaults.textButtonColors(containerColor = SurfaceSecondary.copy(alpha = 0.8f))
+            ) {
+                Text("Skip Tutorial", color = TextSecondary, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        // Tutorial Bubble
         val isTargetInTopHalf = inflatedRect?.let { it.center.y < screenHeightPx / 2 } ?: true
         val bubbleAlignment = if (isTargetInTopHalf) Alignment.BottomCenter else Alignment.TopCenter
-        
-        // Dynamic padding to avoid overlap
-        val bubblePadding = if (isTargetInTopHalf) {
-             PaddingValues(bottom = 140.dp)
-        } else {
-             PaddingValues(top = 100.dp)
-        }
+        val bubblePadding = if (isTargetInTopHalf) PaddingValues(bottom = 140.dp) else PaddingValues(top = 110.dp)
 
         AnimatedContent(
             targetState = currentStep,
