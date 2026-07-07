@@ -115,8 +115,9 @@ fun SpaceDetailsScreen(
                 item {
                     Column(modifier = Modifier.padding(vertical = 16.dp)) {
                         Text(text = details.space.name, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                        if (details.space.description.isNotEmpty()) {
-                            Text(text = details.space.description, fontSize = 14.sp, color = Color.Gray)
+                        val desc = details.space.description
+                        if (desc != null && desc != "") {
+                            Text(text = desc, fontSize = 14.sp, color = Color.Gray)
                         }
                         if (details.parentSpace != null) {
                             Spacer(modifier = Modifier.height(6.dp))

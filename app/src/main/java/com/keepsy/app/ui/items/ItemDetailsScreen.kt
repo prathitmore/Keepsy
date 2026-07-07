@@ -1,6 +1,5 @@
 package com.keepsy.app.ui.items
 
-import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,12 +18,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.keepsy.app.R
 import com.keepsy.app.navigation.SubScreen
 import com.keepsy.app.ui.components.*
 import com.keepsy.app.ui.theme.*
@@ -40,7 +39,6 @@ fun ItemDetailsScreen(
     onPop: () -> Unit,
     onNavigateToSub: (SubScreen) -> Unit
 ) {
-    val context = LocalContext.current
     val itemDetails by viewModel.selectedItem.collectAsStateWithLifecycle()
     val activityTrail by viewModel.getActivityTrailForItem(itemId).collectAsStateWithLifecycle(emptyList())
 
@@ -132,7 +130,7 @@ fun ItemDetailsScreen(
                             fontWeight = FontWeight.ExtraBold,
                             color = TextPrimary
                         )
-                        if (details.item.description.isNotEmpty()) {
+                        if (details.item.description != "") {
                             Text(
                                 text = details.item.description,
                                 style = MaterialTheme.typography.bodyLarge,
@@ -219,7 +217,7 @@ fun ItemDetailsScreen(
                 }
 
                 // Notes Section
-                if (details.item.notes.isNotEmpty()) {
+                if (details.item.notes != "") {
                     item {
                         SectionHeader(title = "Retrieval Notes")
                         Surface(

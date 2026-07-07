@@ -1,6 +1,9 @@
 package com.keepsy.app.ui.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -39,7 +43,38 @@ fun HomeScreen(
             .background(Background),
         contentPadding = PaddingValues(bottom = 100.dp)
     ) {
-        // Statistics Area
+        // 1. Search Shortcut
+        item {
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 24.dp, vertical = 8.dp)
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(CardBackground.copy(alpha = 0.4f))
+                    .border(BorderStroke(1.dp, BorderColor.copy(alpha = 0.4f)), RoundedCornerShape(20.dp))
+                    .clickable { onTabSelected(TabScreen.Search) }
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Search, 
+                        contentDescription = null, 
+                        tint = PrimaryAccent,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Search items, spaces, or notes...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = TextSecondary.copy(alpha = 0.5f)
+                    )
+                }
+            }
+        }
+
+        // 2. Statistics Overview
         item {
             Row(
                 modifier = Modifier
@@ -62,10 +97,18 @@ fun HomeScreen(
             }
         }
 
-        // Favorites Section
+        // 3. Favorites Section
         if (favorites.isNotEmpty()) {
             item {
-                SectionHeader(title = "Pinned Favorites")
+                SectionHeader(
+                    title = "Pinned Favorites",
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                    action = {
+                        TextButton(onClick = { onTabSelected(TabScreen.Search) }) {
+                            Text("See All", color = PrimaryAccent, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                )
             }
             item {
                 Row(
@@ -82,13 +125,23 @@ fun HomeScreen(
                             modifier = Modifier.weight(1f)
                         )
                     }
+                    // Fill remaining slots for alignment
+                    val remaining = 3 - favorites.take(3).size
+                    if (remaining > 0) {
+                        repeat(remaining) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
                 }
             }
         }
 
-        // Recently Added Section
+        // 4. Recently Added Section
         item {
-            SectionHeader(title = "Recently Added")
+            SectionHeader(
+                title = "Recently Added",
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+            )
         }
 
         if (recentlyAdded.isEmpty()) {
