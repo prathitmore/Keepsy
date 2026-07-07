@@ -25,7 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -53,19 +53,12 @@ fun TutorialOverlay(
     val screenWidthPx = with(density) { config.screenWidthDp.dp.toPx() }
     val screenHeightPx = with(density) { config.screenHeightDp.dp.toPx() }
 
-    // Track the overlay's own position to calculate relative offsets
-    var overlayOffset by remember { mutableStateOf(Offset.Zero) }
-
-    val rawRect = currentStep.spotlightKey?.let { spotlights[it] }
-    
-    // Calculate the rect relative to THIS overlay Box
-    val relativeRect = remember(rawRect, overlayOffset) {
-        rawRect?.translate(-overlayOffset)
-    }
+    // Use absolute root coordinates to avoid parent offset confusion
+    val rect = currentStep.spotlightKey?.let { spotlights[it] }
 
     // Add padding around the spotlight
-    val inflatedRect = remember(relativeRect) {
-        relativeRect?.let {
+    val inflatedRect = remember(rect) {
+        rect?.let {
             if (it.width <= 0 || it.height <= 0) return@let null
             val padding = with(density) { 10.dp.toPx() }
             Rect(
@@ -84,68 +77,59 @@ fun TutorialOverlay(
         label = "spotlight_rect"
     )
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .onGloballyPositioned { overlayOffset = it.positionInWindow() }
-    ) {
-        // --- 1. TOUCH BLOCKER SYSTEM (The most important fix) ---
-        // We use 4 boxes around the animatedRect to block touches, 
-        // leaving the hole completely empty so touches pass through to the real UI.
-        
+    Box(modifier = modifier.fillMaxSize()) {
+        // --- 1. TOUCH BLOCKER SYSTEM ---
         if (inflatedRect != null && !animatedRect.isEmpty) {
-            val rect = animatedRect
+            val r = animatedRect
             
             // Top Blocker
             Box(modifier = Modifier
                 .offset(y = 0.dp)
                 .fillMaxWidth()
-                .height(with(density) { maxOf(0f, rect.top).toDp() })
+                .height(with(density) { maxOf(0f, r.top).toDp() })
                 .pointerInput(Unit) { awaitPointerEventScope { while(true) { awaitPointerEvent().changes.forEach { it.consume() } } } }
                 .zIndex(100f)
             )
             
             // Bottom Blocker
             Box(modifier = Modifier
-                .offset(y = with(density) { rect.bottom.toDp() })
+                .offset(y = with(density) { r.bottom.toDp() })
                 .fillMaxWidth()
-                .height(with(density) { maxOf(0f, screenHeightPx - rect.bottom).toDp() })
+                .height(with(density) { maxOf(0f, screenHeightPx - r.bottom).toDp() })
                 .pointerInput(Unit) { awaitPointerEventScope { while(true) { awaitPointerEvent().changes.forEach { it.consume() } } } }
                 .zIndex(100f)
             )
             
             // Left Blocker
             Box(modifier = Modifier
-                .offset(x = 0.dp, y = with(density) { rect.top.toDp() })
-                .width(with(density) { maxOf(0f, rect.left).toDp() })
-                .height(with(density) { rect.height.toDp() })
+                .offset(x = 0.dp, y = with(density) { r.top.toDp() })
+                .width(with(density) { maxOf(0f, r.left).toDp() })
+                .height(with(density) { r.height.toDp() })
                 .pointerInput(Unit) { awaitPointerEventScope { while(true) { awaitPointerEvent().changes.forEach { it.consume() } } } }
                 .zIndex(100f)
             )
             
             // Right Blocker
             Box(modifier = Modifier
-                .offset(x = with(density) { rect.right.toDp() }, y = with(density) { rect.top.toDp() })
-                .width(with(density) { maxOf(0f, screenWidthPx - rect.right).toDp() })
-                .height(with(density) { rect.height.toDp() })
+                .offset(x = with(density) { r.right.toDp() }, y = with(density) { r.top.toDp() })
+                .width(with(density) { maxOf(0f, screenWidthPx - r.right).toDp() })
+                .height(with(density) { r.height.toDp() })
                 .pointerInput(Unit) { awaitPointerEventScope { while(true) { awaitPointerEvent().changes.forEach { it.consume() } } } }
                 .zIndex(100f)
             )
 
-            // Optional: Internal tapping for informational steps
             if (currentStep.advanceOnTap) {
                 Box(modifier = Modifier
-                    .offset(x = with(density) { rect.left.toDp() }, y = with(density) { rect.top.toDp() })
-                    .size(with(density) { rect.width.toDp() }, with(density) { rect.height.toDp() })
+                    .offset(x = with(density) { r.left.toDp() }, y = with(density) { r.top.toDp() })
+                    .size(with(density) { r.width.toDp() }, with(density) { r.height.toDp() })
                     .clickable { viewModel.nextStep() }
                 )
             }
         } else {
-            // If no spotlight, block everything
             Box(modifier = Modifier.fillMaxSize().pointerInput(Unit) { awaitPointerEventScope { while(true) { awaitPointerEvent().changes.forEach { it.consume() } } } })
         }
 
-        // --- 2. VISUAL OVERLAY (Dimming & Glow) ---
+        // --- 2. VISUAL OVERLAY ---
         Canvas(modifier = Modifier.fillMaxSize().graphicsLayer(alpha = 0.99f)) {
             drawRect(color = Color.Black.copy(alpha = 0.7f))
             
@@ -172,7 +156,7 @@ fun TutorialOverlay(
             }
         }
         
-        // Animated Border & Arrow
+        // Border & Arrow
         if (inflatedRect != null && !animatedRect.isEmpty) {
             val key = currentStep.spotlightKey ?: ""
             val isCircular = key.contains("fab") || key.contains("tab")
@@ -181,14 +165,10 @@ fun TutorialOverlay(
             val arrowBounce by infiniteTransition.animateFloat(
                 initialValue = 0f,
                 targetValue = 15f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(600, easing = EaseInOutQuad),
-                    repeatMode = RepeatMode.Reverse
-                ),
+                animationSpec = infiniteRepeatable(animation = tween(600, easing = EaseInOutQuad), repeatMode = RepeatMode.Reverse),
                 label = "bounce"
             )
 
-            // Border
             Box(
                 modifier = Modifier
                     .offset(
@@ -202,7 +182,6 @@ fun TutorialOverlay(
                     .border(2.dp, PrimaryAccent, if (isCircular) CircleShape else RoundedCornerShape(16.dp))
             )
 
-            // Arrow
             val isTargetInBottomHalf = animatedRect.center.y > screenHeightPx / 2
             Icon(
                 imageVector = if (isTargetInBottomHalf) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
@@ -212,23 +191,17 @@ fun TutorialOverlay(
                     .offset(
                         x = with(density) { (animatedRect.center.x - 12.dp.toPx()).toDp() },
                         y = with(density) { 
-                            if (isTargetInBottomHalf) 
-                                (animatedRect.top - 45f - arrowBounce).toDp()
-                            else 
-                                (animatedRect.bottom + 10f + arrowBounce).toDp()
+                            if (isTargetInBottomHalf) (animatedRect.top - 45f - arrowBounce).toDp()
+                            else (animatedRect.bottom + 10f + arrowBounce).toDp()
                         }
                     )
                     .size(24.dp)
             )
         }
 
-        // --- 3. UI CONTROLS ---
-        
-        // Global Skip - Top Right
+        // Global Skip
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 48.dp, end = 24.dp),
+            modifier = Modifier.fillMaxSize().padding(top = 48.dp, end = 24.dp),
             contentAlignment = Alignment.TopEnd
         ) {
             TextButton(
@@ -246,13 +219,8 @@ fun TutorialOverlay(
 
         AnimatedContent(
             targetState = currentStep,
-            transitionSpec = {
-                (fadeIn() + slideInHorizontally { it / 2 }).togetherWith(fadeOut() + slideOutHorizontally { -it / 2 })
-            },
-            modifier = Modifier
-                .align(bubbleAlignment)
-                .padding(24.dp)
-                .padding(bubblePadding),
+            transitionSpec = { (fadeIn() + slideInHorizontally { it / 2 }).togetherWith(fadeOut() + slideOutHorizontally { -it / 2 }) },
+            modifier = Modifier.align(bubbleAlignment).padding(24.dp).padding(bubblePadding),
             label = "bubble"
         ) { step ->
             TutorialBubble(step = step)
@@ -266,9 +234,7 @@ fun TutorialBubble(
     modifier: Modifier = Modifier
 ) {
     ElevatedCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .wrapContentHeight(),
+        modifier = modifier.fillMaxWidth().wrapContentHeight(),
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.elevatedCardColors(containerColor = SurfaceSecondary),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 20.dp)
@@ -288,39 +254,16 @@ fun TutorialBubble(
             }
 
             Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(PrimaryPurple.copy(alpha = 0.15f)),
+                modifier = Modifier.size(56.dp).clip(RoundedCornerShape(16.dp)).background(PrimaryPurple.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = stepIcon,
-                    contentDescription = null,
-                    tint = PrimaryPurple,
-                    modifier = Modifier.size(32.dp)
-                )
+                Icon(imageVector = stepIcon, contentDescription = null, tint = PrimaryPurple, modifier = Modifier.size(32.dp))
             }
             
             Spacer(modifier = Modifier.height(20.dp))
-            
-            Text(
-                text = step.title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.ExtraBold,
-                color = TextPrimary,
-                textAlign = TextAlign.Center
-            )
-            
+            Text(text = step.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = TextPrimary, textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(10.dp))
-            
-            Text(
-                text = step.description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
-                textAlign = TextAlign.Center,
-                lineHeight = 22.sp
-            )
+            Text(text = step.description, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, textAlign = TextAlign.Center, lineHeight = 22.sp)
         }
     }
 }
@@ -332,7 +275,7 @@ fun Modifier.tutorialSpotlight(
     try {
         if (layoutCoordinates.isAttached) {
             val rect = Rect(
-                offset = layoutCoordinates.positionInWindow(),
+                offset = layoutCoordinates.positionInRoot(),
                 size = layoutCoordinates.size.toSize()
             )
             if (!rect.left.isNaN() && !rect.top.isNaN()) {
