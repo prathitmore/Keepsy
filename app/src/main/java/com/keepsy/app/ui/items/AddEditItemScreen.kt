@@ -226,7 +226,9 @@ fun AddEditItemScreen(
                 onValueChange = { name = it },
                 label = "Item Name *",
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-                modifier = Modifier.testTag("item_form_name_input")
+                modifier = Modifier
+                    .testTag("item_form_name_input")
+                    .tutorialSpotlight("item_form_name_input", viewModel.tutorialViewModel)
             )
 
             // Location Selector

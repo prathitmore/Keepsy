@@ -12,13 +12,13 @@ enum class TutorialStep(
     ),
     INTERFACE_OVERVIEW(
         "The Dashboard",
-        "This is your command center. You can see your recent items and total inventory at a glance.",
+        "This is your command center. Tap the Home icon below to start.",
         "home_tab",
         true
     ),
     SPACE_TAB_INTRO(
         "Inventory Map",
-        "Tap the 'Spaces' tab to see your physical storage structure.",
+        "Tap the 'Spaces' tab to start building your physical storage structure.",
         "spaces_tab",
         true
     ),
@@ -29,32 +29,34 @@ enum class TutorialStep(
     ),
     SPACE_FORM_DETAILS(
         "Describe your Space",
-        "Give your space a name like 'Home' or 'Office' and tap 'Save Space'.",
-        "submit_space_form_btn"
+        "Tap the Name field to name your space 'Home', then tap 'Save Space'.",
+        "space_form_name_input",
+        true
     ),
     SUBSPACE_INTRO(
         "Step 2: Add a Subspace",
-        "Inside 'Home', you can add a 'Bedroom'. Tap 'Add Subspace' to stay precise.",
+        "Now tap 'Add Subspace' to add a 'Bedroom' inside your Home. Nesting helps you stay precise.",
         "add_subspace_btn"
     ),
     ITEM_INTRO(
         "Step 3: Save an Item",
-        "Now, let's save your first item, like 'Car Keys', into your 'Bedroom'.",
+        "Finally, go to the Home tab and tap the '+' button to save 'Car Keys' into your 'Bedroom'.",
         "add_item_fab"
     ),
     ITEM_FORM_DETAILS(
         "Item Details",
         "Name your item and pick the space you just created. Then tap 'Save Item'.",
-        "submit_item_form_btn"
+        "item_form_name_input",
+        true
     ),
     RETRIEVAL_INTRO(
-        "Instant Search",
-        "Next time you lose something, just search for it! Keepsy will show you exactly where it is.",
-        "search_tab",
+        "Find Anything Instantly",
+        "Next time you lose your keys, just search for them. Tap the Search bar to see retrieval in action.",
+        "search_bar",
         true
     ),
     COMPLETION(
-        "You're Ready!",
-        "You've mastered the fundamentals of Keepsy. Welcome to an organized life!"
+        "Launch Ready!",
+        "You're all set to organize your life. Start tracking your belongings now!"
     )
 }

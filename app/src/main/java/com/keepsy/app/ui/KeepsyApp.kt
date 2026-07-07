@@ -69,32 +69,31 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
     val onboardingDone by viewModel.isOnboardingCompleted.collectAsStateWithLifecycle()
     val tutorialDone by viewModel.isTutorialCompleted.collectAsStateWithLifecycle()
 
-    LaunchedEffect(authState, isSplashAnimationComplete, onboardingDone, tutorialDone) {
-        if (!isSplashAnimationComplete) return@LaunchedEffect
-        
-        delay(300) // Small buffer for stability
-        KeepsyLogger.d("KeepsyApp: Navigation state - Auth: $authState, Onboarding: $onboardingDone, Tutorial: $tutorialDone")
-        
-        try {
-            when (authState) {
+    // 1. Monitor state changes to decide on screen transitions
+    LaunchedEffect(authState, isSplashAnimationComplete) {
+        snapshotFlow { 
+            Triple(authState, onboardingDone, tutorialDone) 
+        }.collect { (auth, onboarding, tutorial) ->
+            if (!isSplashAnimationComplete) return@collect
+            
+            KeepsyLogger.d("KeepsyApp: Navuating - Auth: $auth, Onboarding: $onboarding, Tutorial: $tutorial")
+            
+            when (auth) {
                 is AuthState.Authenticated -> {
-                    val user = (authState as AuthState.Authenticated).user
-                    
-                    // 1. Check if email is verified
+                    val user = auth.user
                     if (!user.isEmailVerified) {
-                        KeepsyLogger.i("KeepsyApp: Email not verified")
                         appScreen = Screen.VerifyEmail
                     } else {
-                        // 2. Show Success screen
-                        appScreen = Screen.AuthSuccess(user.name ?: user.email ?: "Friend")
-                        delay(2000)
+                        // We stay on Success for a moment before branching
+                        if (appScreen !is Screen.AuthSuccess && appScreen != Screen.Dashboard && appScreen != Screen.Tutorial && appScreen != Screen.Onboarding) {
+                            appScreen = Screen.AuthSuccess(user.name ?: user.email ?: "Friend")
+                            delay(1800)
+                        }
                         
-                        // 3. Navigation Decision
-                        if (onboardingDone) {
-                            if (tutorialDone) {
+                        if (onboarding) {
+                            if (tutorial) {
                                 appScreen = Screen.Dashboard
                             } else {
-                                KeepsyLogger.i("KeepsyApp: Starting Tutorial")
                                 appScreen = Screen.Tutorial
                             }
                         } else {
@@ -107,8 +106,6 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
                 }
                 else -> {}
             }
-        } catch (e: Exception) {
-            KeepsyLogger.e("Navigation error", e)
         }
     }
 

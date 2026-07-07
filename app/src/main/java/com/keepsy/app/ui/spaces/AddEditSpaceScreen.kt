@@ -211,7 +211,9 @@ fun AddEditSpaceScreen(
                 onValueChange = { name = it },
                 label = "Space Name *",
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-                modifier = Modifier.testTag("space_form_name_input")
+                modifier = Modifier
+                    .testTag("space_form_name_input")
+                    .tutorialSpotlight("space_form_name_input", viewModel.tutorialViewModel)
             )
 
             KeepsyTextField(
