@@ -18,8 +18,6 @@ import com.keepsy.app.ui.auth.AuthSuccessScreen
 import com.keepsy.app.ui.auth.EmailVerificationScreen
 import com.keepsy.app.ui.components.SplashScreenView
 import com.keepsy.app.ui.onboarding.OnboardingScreenView
-import com.keepsy.app.ui.tutorial.TutorialScreen
-import com.keepsy.app.ui.tutorial.TutorialViewModel
 import com.keepsy.app.viewmodel.KeepsyViewModel
 import com.keepsy.app.utils.KeepsyLogger
 import kotlinx.coroutines.delay
@@ -34,8 +32,6 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
 
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     val isRestoringData by viewModel.isRestoringData.collectAsStateWithLifecycle()
-    val isTutorialCompleted by viewModel.isTutorialCompleted.collectAsStateWithLifecycle()
-    val isTutorialRequested by viewModel.isTutorialRequested.collectAsStateWithLifecycle()
     
     var appScreen by remember { mutableStateOf<Screen>(Screen.Splash) }
     var authSubScreen by remember { mutableStateOf<AuthSubScreen>(AuthSubScreen.Welcome) }
@@ -59,63 +55,38 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
         return false
     }
 
-    LaunchedEffect(isTutorialRequested) {
-        if (isTutorialRequested) {
-            appScreen = Screen.Tutorial
-            viewModel.requestTutorial(false)
-        }
-    }
-
     val onboardingDone by viewModel.isOnboardingCompleted.collectAsStateWithLifecycle()
-    val tutorialDone by viewModel.isTutorialCompleted.collectAsStateWithLifecycle()
 
     // 1. Monitor state changes to decide on screen transitions
-    LaunchedEffect(authState, isSplashAnimationComplete) {
-        snapshotFlow { 
-            Triple(authState, onboardingDone, tutorialDone) 
-        }.collect { (auth, onboarding, tutorial) ->
-            if (!isSplashAnimationComplete) return@collect
-            
-            KeepsyLogger.d("KeepsyApp: Navuating - Auth: $auth, Onboarding: $onboarding, Tutorial: $tutorial")
-            
-            when (auth) {
-                is AuthState.Authenticated -> {
-                    val user = auth.user
-                    if (!user.isEmailVerified) {
-                        appScreen = Screen.VerifyEmail
+    LaunchedEffect(authState, isSplashAnimationComplete, onboardingDone) {
+        if (!isSplashAnimationComplete) return@LaunchedEffect
+        
+        delay(300)
+        KeepsyLogger.d("KeepsyApp: Navigating - Auth: $authState, Onboarding: $onboardingDone")
+        
+        when (authState) {
+            is AuthState.Authenticated -> {
+                val user = (authState as AuthState.Authenticated).user
+                if (!user.isEmailVerified) {
+                    appScreen = Screen.VerifyEmail
+                } else {
+                    // We stay on Success for a moment before branching
+                    if (appScreen !is Screen.AuthSuccess && appScreen != Screen.Dashboard && appScreen != Screen.Onboarding) {
+                        appScreen = Screen.AuthSuccess(user.name ?: user.email ?: "Friend")
+                        delay(1800)
+                    }
+                    
+                    if (onboardingDone) {
+                        appScreen = Screen.Dashboard
                     } else {
-                        // We stay on Success for a moment before branching
-                        if (appScreen !is Screen.AuthSuccess && appScreen != Screen.Dashboard && appScreen != Screen.Tutorial && appScreen != Screen.Onboarding) {
-                            appScreen = Screen.AuthSuccess(user.name ?: user.email ?: "Friend")
-                            delay(1800)
-                        }
-                        
-                        if (onboarding) {
-                            if (tutorial) {
-                                KeepsyLogger.i("KeepsyApp: Tutorial done, going to Dashboard")
-                                appScreen = Screen.Dashboard
-                            } else {
-                                // For returning users, check if they have items before showing tutorial
-                                val hasItems = viewModel.activeItems.first().isNotEmpty()
-                                if (hasItems) {
-                                    KeepsyLogger.i("KeepsyApp: Returning user with items, skipping tutorial")
-                                    viewModel.tutorialViewModel.skipTutorial()
-                                    appScreen = Screen.Dashboard
-                                } else {
-                                    KeepsyLogger.i("KeepsyApp: New user without items, starting Tutorial")
-                                    appScreen = Screen.Tutorial
-                                }
-                            }
-                        } else {
-                            appScreen = Screen.Onboarding
-                        }
+                        appScreen = Screen.Onboarding
                     }
                 }
-                is AuthState.Unauthenticated, is AuthState.Error -> {
-                    appScreen = Screen.Auth
-                }
-                else -> {}
             }
+            is AuthState.Unauthenticated, is AuthState.Error -> {
+                appScreen = Screen.Auth
+            }
+            else -> {}
         }
     }
 
@@ -172,15 +143,6 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
                             KeepsyLogger.i("KeepsyApp: Onboarding finished")
                             viewModel.setOnboardingCompleted()
                             viewModel.manualSync()
-                            // No need to change appScreen manually, 
-                            // the reactive LaunchedEffect will handle it.
-                        }
-                    )
-                    Screen.Tutorial -> TutorialScreen(
-                        viewModel = viewModel,
-                        tutorialViewModel = viewModel.tutorialViewModel,
-                        onFinished = {
-                            appScreen = Screen.Dashboard
                         }
                     )
                     Screen.VerifyEmail -> EmailVerificationScreen(viewModel = viewModel)
@@ -194,8 +156,7 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
                             },
                             currentSubScreen = currentSubScreen,
                             onNavigateToSub = ::navigateToSub,
-                            onPopSub = { popSub() },
-                            tutorialViewModel = viewModel.tutorialViewModel
+                            onPopSub = { popSub() }
                         )
                     }
                 }

@@ -32,7 +32,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.keepsy.app.ui.components.*
 import com.keepsy.app.ui.theme.*
-import com.keepsy.app.ui.tutorial.tutorialSpotlight
 import com.keepsy.app.viewmodel.KeepsyViewModel
 import java.io.File
 
@@ -226,9 +225,7 @@ fun AddEditItemScreen(
                 onValueChange = { name = it },
                 label = "Item Name *",
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-                modifier = Modifier
-                    .testTag("item_form_name_input")
-                    .tutorialSpotlight("item_form_name_input", viewModel.tutorialViewModel)
+                modifier = Modifier.testTag("item_form_name_input")
             )
 
             // Location Selector
@@ -361,9 +358,7 @@ fun AddEditItemScreen(
                         Toast.makeText(context, "Please fill required fields", Toast.LENGTH_SHORT).show()
                     }
                 },
-                modifier = Modifier
-                    .testTag("submit_item_form_btn")
-                    .tutorialSpotlight("submit_item_form_btn", viewModel.tutorialViewModel)
+                modifier = Modifier.testTag("submit_item_form_btn")
             )
             
             Spacer(modifier = Modifier.height(32.dp))

@@ -24,10 +24,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.keepsy.app.navigation.SubScreen
-import com.keepsy.app.ui.components.ItemRowCard
+import com.keepsy.app.ui.components.*
 import com.keepsy.app.ui.theme.*
-import com.keepsy.app.ui.tutorial.TutorialViewModel
-import com.keepsy.app.ui.tutorial.tutorialSpotlight
 import com.keepsy.app.utils.getSpaceIconVector
 import com.keepsy.app.viewmodel.KeepsyViewModel
 import java.io.File
@@ -38,8 +36,7 @@ fun SpaceDetailsScreen(
     spaceId: Long,
     viewModel: KeepsyViewModel,
     onPop: () -> Unit,
-    onNavigateToSub: (SubScreen) -> Unit,
-    tutorialViewModel: TutorialViewModel? = null
+    onNavigateToSub: (SubScreen) -> Unit
 ) {
     val context = LocalContext.current
     val spaceDetails by viewModel.selectedSpace.collectAsStateWithLifecycle()
@@ -199,9 +196,7 @@ fun SpaceDetailsScreen(
                         Button(
                             onClick = { onNavigateToSub(SubScreen.AddEditSpace(parentSpaceId = details.space.spaceId)) },
                             colors = ButtonDefaults.buttonColors(containerColor = DeepIndigoPrimary),
-                            modifier = Modifier
-                                .weight(1f)
-                                .then(if (tutorialViewModel != null) Modifier.tutorialSpotlight("add_subspace_btn", tutorialViewModel) else Modifier)
+                            modifier = Modifier.weight(1f)
                         ) {
                             Icon(imageVector = Icons.Default.Subtitles, contentDescription = "")
                             Spacer(modifier = Modifier.width(6.dp))

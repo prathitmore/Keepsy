@@ -345,6 +345,98 @@ fun SpaceTreeNode(
 }
 
 @Composable
+fun PremiumItemCard(
+    itemDetails: ItemWithDetails,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (isPressed) 0.95f else 1f, label = "scale")
+
+    Card(
+        onClick = onClick,
+        modifier = modifier
+            .height(160.dp)
+            .graphicsLayer(scaleX = scale, scaleY = scale),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceSecondary),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (itemDetails.item.photoPath != null && File(itemDetails.item.photoPath).exists()) {
+                AsyncImage(
+                    model = File(itemDetails.item.photoPath),
+                    contentDescription = itemDetails.item.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+                // Overlay for readability
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
+                            )
+                        )
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(PrimaryPurple.copy(alpha = 0.1f), CardBackground)
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = getSmartItemIconVector(itemDetails.item.name, itemDetails.category?.icon),
+                        contentDescription = null,
+                        tint = parseCategoryColor(itemDetails.category?.color).copy(alpha = 0.4f),
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = itemDetails.item.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = itemDetails.space?.name ?: "No location",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.7f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PremiumSpaceCard(space: Space, onClick: () -> Unit) {
+    SpaceHorizontalCard(space = space, onClick = onClick)
+}
+
+@Composable
+fun ActivityLogCard(log: ActivityLog) {
+    TimelineCard(log = log, onClickItem = {})
+}
+
+@Composable
 fun TimelineCard(log: ActivityLog, onClickItem: () -> Unit) {
     val formattedDate = remember(log.timestamp) {
         try {

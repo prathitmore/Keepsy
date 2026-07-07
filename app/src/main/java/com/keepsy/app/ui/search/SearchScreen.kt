@@ -19,15 +19,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.keepsy.app.navigation.SubScreen
 import com.keepsy.app.ui.components.*
 import com.keepsy.app.ui.theme.*
-import com.keepsy.app.ui.tutorial.TutorialViewModel
-import com.keepsy.app.ui.tutorial.tutorialSpotlight
 import com.keepsy.app.viewmodel.KeepsyViewModel
 
 @Composable
 fun SearchScreen(
     viewModel: KeepsyViewModel, 
-    onNavigateToSub: (SubScreen) -> Unit,
-    tutorialViewModel: TutorialViewModel? = null
+    onNavigateToSub: (SubScreen) -> Unit
 ) {
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
@@ -43,7 +40,6 @@ fun SearchScreen(
             placeholder = "Search items, spaces, or notes...",
             modifier = Modifier
                 .padding(bottom = 16.dp)
-                .then(if (tutorialViewModel != null) Modifier.tutorialSpotlight("search_bar", tutorialViewModel) else Modifier)
         )
 
         if (searchQuery == "") {

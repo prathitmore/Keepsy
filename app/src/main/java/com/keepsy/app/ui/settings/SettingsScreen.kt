@@ -157,14 +157,6 @@ fun SettingsScreen(viewModel: KeepsyViewModel, onNavigateToSub: (SubScreen) -> U
         item {
             PremiumSettingsCard(title = "Account & System") {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    SettingsActionRow(
-                        icon = Icons.Default.HelpCenter,
-                        title = "Interactive Tutorial",
-                        subtitle = "Replay the guided tour",
-                        onClick = {
-                            viewModel.requestTutorial(true)
-                        }
-                    )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
                     SettingsActionRow(
                         icon = Icons.AutoMirrored.Filled.Logout,

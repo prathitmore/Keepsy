@@ -22,15 +22,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.keepsy.app.navigation.SubScreen
 import com.keepsy.app.ui.components.*
 import com.keepsy.app.ui.theme.*
-import com.keepsy.app.ui.tutorial.TutorialViewModel
-import com.keepsy.app.ui.tutorial.tutorialSpotlight
 import com.keepsy.app.viewmodel.KeepsyViewModel
 
 @Composable
 fun SpacesScreen(
     viewModel: KeepsyViewModel, 
-    onNavigateToSub: (SubScreen) -> Unit,
-    tutorialViewModel: TutorialViewModel? = null
+    onNavigateToSub: (SubScreen) -> Unit
 ) {
     val spacesList by viewModel.spaces.collectAsStateWithLifecycle(emptyList())
     val expandedSpaceIds = remember { mutableStateListOf<Long>() }
@@ -69,59 +66,22 @@ fun SpacesScreen(
             ) {
                 val rootSpaces = spacesList.filter { it.parentSpaceId == null || it.parentSpaceId == 0L }
                 
-                if (rootSpaces.isEmpty() && spacesList.isNotEmpty()) {
-                    items(spacesList, key = { "space_${it.spaceId}" }) { space ->
-                        SpaceTreeNode(
-                            space = space,
-                            allSpaces = spacesList,
-                            depth = 0,
-                            expandedIds = expandedSpaceIds,
-                            onNodeClick = { spaceId ->
-                                if (expandedSpaceIds.contains(spaceId)) {
-                                    expandedSpaceIds.remove(spaceId)
-                                } else {
-                                    expandedSpaceIds.add(spaceId)
-                                }
-                            },
-                            onNodeDetails = { spaceId -> onNavigateToSub(SubScreen.SpaceDetails(spaceId)) }
-                        )
-                    }
-                } else {
-                    items(rootSpaces.take(1), key = { "root_tut_${it.spaceId}" }) { rootSpace ->
-                        Box(modifier = if (tutorialViewModel != null) Modifier.tutorialSpotlight("space_card_0", tutorialViewModel) else Modifier) {
-                            SpaceTreeNode(
-                                space = rootSpace,
-                                allSpaces = spacesList,
-                                depth = 0,
-                                expandedIds = expandedSpaceIds,
-                                onNodeClick = { spaceId ->
-                                    if (expandedSpaceIds.contains(spaceId)) {
-                                        expandedSpaceIds.remove(spaceId)
-                                    } else {
-                                        expandedSpaceIds.add(spaceId)
-                                    }
-                                },
-                                onNodeDetails = { spaceId -> onNavigateToSub(SubScreen.SpaceDetails(spaceId)) }
-                            )
-                        }
-                    }
-                    items(rootSpaces.drop(1), key = { "root_${it.spaceId}" }) { rootSpace ->
-                        SpaceTreeNode(
-                            space = rootSpace,
-                            allSpaces = spacesList,
-                            depth = 0,
-                            expandedIds = expandedSpaceIds,
-                            onNodeClick = { spaceId ->
-                                if (expandedSpaceIds.contains(spaceId)) {
-                                    expandedSpaceIds.remove(spaceId)
-                                } else {
-                                    expandedSpaceIds.add(spaceId)
-                                }
-                            },
-                            onNodeDetails = { spaceId -> onNavigateToSub(SubScreen.SpaceDetails(spaceId)) }
-                        )
-                    }
-                 }
+                items(rootSpaces, key = { "root_${it.spaceId}" }) { rootSpace ->
+                    SpaceTreeNode(
+                        space = rootSpace,
+                        allSpaces = spacesList,
+                        depth = 0,
+                        expandedIds = expandedSpaceIds,
+                        onNodeClick = { spaceId ->
+                            if (expandedSpaceIds.contains(spaceId)) {
+                                expandedSpaceIds.remove(spaceId)
+                            } else {
+                                expandedSpaceIds.add(spaceId)
+                            }
+                        },
+                        onNodeDetails = { spaceId -> onNavigateToSub(SubScreen.SpaceDetails(spaceId)) }
+                    )
+                }
             }
         }
     }

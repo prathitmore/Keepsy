@@ -43,9 +43,8 @@ import com.keepsy.app.ui.trash.TrashBinScreen
 import com.keepsy.app.model.SyncState
 import com.keepsy.app.viewmodel.KeepsyViewModel
 import com.keepsy.app.ui.components.*
-import com.keepsy.app.ui.tutorial.*
 
-data class NavItem(val tab: TabScreen, val icon: androidx.compose.ui.graphics.vector.ImageVector, val tutorialKey: String? = null)
+data class NavItem(val tab: TabScreen, val icon: androidx.compose.ui.graphics.vector.ImageVector)
 
 @Composable
 fun DashboardScaffold(
@@ -54,8 +53,7 @@ fun DashboardScaffold(
     onTabSelected: (TabScreen) -> Unit,
     currentSubScreen: SubScreen,
     onNavigateToSub: (SubScreen) -> Unit,
-    onPopSub: () -> Unit,
-    tutorialViewModel: TutorialViewModel? = null
+    onPopSub: () -> Unit
 ) {
     val syncStatus by viewModel.syncState.collectAsStateWithLifecycle()
     val spacesList by viewModel.spaces.collectAsStateWithLifecycle(emptyList())
@@ -83,8 +81,7 @@ fun DashboardScaffold(
                 if (currentSubScreen == SubScreen.None) {
                     FloatingBottomNavigation(
                         currentTab = currentTab,
-                        onTabSelected = onTabSelected,
-                        tutorialViewModel = tutorialViewModel
+                        onTabSelected = onTabSelected
                     )
                 }
             },
@@ -99,8 +96,7 @@ fun DashboardScaffold(
                     if (showFab) {
                         PremiumFAB(
                             currentTab = currentTab,
-                            onNavigateToSub = onNavigateToSub,
-                            tutorialViewModel = tutorialViewModel
+                            onNavigateToSub = onNavigateToSub
                         )
                     }
                 }
@@ -126,10 +122,10 @@ fun DashboardScaffold(
                             label = "TabTransition"
                         ) { tab ->
                             when (tab) {
-                                TabScreen.Home -> HomeScreen(viewModel, onTabSelected, onNavigateToSub, tutorialViewModel)
-                                TabScreen.Spaces -> SpacesScreen(viewModel, onNavigateToSub, tutorialViewModel)
-                                TabScreen.Search -> SearchScreen(viewModel, onNavigateToSub, tutorialViewModel)
-                                TabScreen.Activity -> ActivityScreen(viewModel, onNavigateToSub, tutorialViewModel)
+                                TabScreen.Home -> HomeScreen(viewModel, onTabSelected, onNavigateToSub)
+                                TabScreen.Spaces -> SpacesScreen(viewModel, onNavigateToSub)
+                                TabScreen.Search -> SearchScreen(viewModel, onNavigateToSub)
+                                TabScreen.Activity -> ActivityScreen(viewModel, onNavigateToSub)
                                 TabScreen.Settings -> SettingsScreen(viewModel, onNavigateToSub)
                             }
                         }
@@ -140,8 +136,7 @@ fun DashboardScaffold(
                                     itemId = sub.itemId,
                                     viewModel = viewModel,
                                     onPop = onPopSub,
-                                    onNavigateToSub = onNavigateToSub,
-                                    tutorialViewModel = tutorialViewModel
+                                    onNavigateToSub = onNavigateToSub
                                 )
                                 is SubScreen.SpaceDetails -> SpaceDetailsScreen(
                                     spaceId = sub.spaceId,
@@ -235,15 +230,14 @@ fun PremiumTopBar(currentTab: TabScreen) {
 @Composable
 fun FloatingBottomNavigation(
     currentTab: TabScreen,
-    onTabSelected: (TabScreen) -> Unit,
-    tutorialViewModel: TutorialViewModel? = null
+    onTabSelected: (TabScreen) -> Unit
 ) {
     val items = remember {
         listOf(
-            NavItem(TabScreen.Home, Icons.Default.Home, "home_tab"),
-            NavItem(TabScreen.Spaces, Icons.Default.Layers, "spaces_tab"),
-            NavItem(TabScreen.Search, Icons.Default.Search, "search_tab"),
-            NavItem(TabScreen.Activity, Icons.Default.History, "activity_tab"),
+            NavItem(TabScreen.Home, Icons.Default.Home),
+            NavItem(TabScreen.Spaces, Icons.Default.Layers),
+            NavItem(TabScreen.Search, Icons.Default.Search),
+            NavItem(TabScreen.Activity, Icons.Default.History),
             NavItem(TabScreen.Settings, Icons.Default.Settings)
         )
     }
@@ -280,15 +274,10 @@ fun FloatingBottomNavigation(
                         label = "icon_scale"
                     )
 
-                    val spotlightModifier = if (item.tutorialKey != null && tutorialViewModel != null) {
-                        Modifier.tutorialSpotlight(item.tutorialKey, tutorialViewModel)
-                    } else Modifier
-
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .then(spotlightModifier)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
@@ -328,20 +317,14 @@ fun FloatingBottomNavigation(
 @Composable
 fun PremiumFAB(
     currentTab: TabScreen,
-    onNavigateToSub: (SubScreen) -> Unit,
-    tutorialViewModel: TutorialViewModel? = null
+    onNavigateToSub: (SubScreen) -> Unit
 ) {
     val icon = if (currentTab == TabScreen.Home) Icons.Default.Add else Icons.Default.AddHome
     val text = if (currentTab == TabScreen.Home) "Item" else "Space"
-    val tutorialKey = if (currentTab == TabScreen.Home) "add_item_fab" else "add_space_fab"
     
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(if (isPressed) 0.9f else 1f, label = "fab_scale")
-
-    val spotlightModifier = if (tutorialViewModel != null) {
-        Modifier.tutorialSpotlight(tutorialKey, tutorialViewModel)
-    } else Modifier
 
     FloatingActionButton(
         onClick = {
@@ -357,7 +340,6 @@ fun PremiumFAB(
             .navigationBarsPadding()
             .padding(bottom = 80.dp)
             .graphicsLayer(scaleX = scale, scaleY = scale)
-            .then(spotlightModifier)
             .shadow(12.dp, CircleShape, spotColor = PrimaryAccent.copy(alpha = 0.5f))
     ) {
         Box(

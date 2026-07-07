@@ -5,7 +5,6 @@ sealed class Screen {
     object Auth : Screen()
     data class AuthSuccess(val name: String) : Screen()
     object Onboarding : Screen()
-    object Tutorial : Screen()
     object VerifyEmail : Screen()
     object Dashboard : Screen()
 }

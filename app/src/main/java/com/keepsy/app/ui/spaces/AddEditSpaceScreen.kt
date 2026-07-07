@@ -35,7 +35,6 @@ import com.keepsy.app.ui.components.*
 import com.keepsy.app.ui.theme.*
 import com.keepsy.app.utils.getSpaceIconLabel
 import com.keepsy.app.utils.getSpaceIconVector
-import com.keepsy.app.ui.tutorial.tutorialSpotlight
 import com.keepsy.app.viewmodel.KeepsyViewModel
 import kotlinx.coroutines.flow.first
 import java.io.File
@@ -211,9 +210,7 @@ fun AddEditSpaceScreen(
                 onValueChange = { name = it },
                 label = "Space Name *",
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-                modifier = Modifier
-                    .testTag("space_form_name_input")
-                    .tutorialSpotlight("space_form_name_input", viewModel.tutorialViewModel)
+                modifier = Modifier.testTag("space_form_name_input")
             )
 
             KeepsyTextField(
@@ -367,9 +364,7 @@ fun AddEditSpaceScreen(
                         Toast.makeText(context, "Space name is required", Toast.LENGTH_SHORT).show()
                     }
                 },
-                modifier = Modifier
-                    .testTag("submit_space_form_btn")
-                    .tutorialSpotlight("submit_space_form_btn", viewModel.tutorialViewModel)
+                modifier = Modifier.testTag("submit_space_form_btn")
             )
             
             Spacer(modifier = Modifier.height(32.dp))

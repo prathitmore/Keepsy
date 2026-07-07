@@ -2,13 +2,14 @@ package com.keepsy.app.ui.items
 
 import android.widget.Toast
 import androidx.compose.animation.*
-import androidx.compose.foundation.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,23 +21,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.keepsy.app.model.Space
 import com.keepsy.app.navigation.SubScreen
-import com.keepsy.app.ui.components.TimelineCard
+import com.keepsy.app.ui.components.*
 import com.keepsy.app.ui.theme.*
-import com.keepsy.app.utils.getSmartItemIconVector
 import com.keepsy.app.utils.getSpaceIconVector
-import com.keepsy.app.utils.parseCategoryColor
 import com.keepsy.app.viewmodel.KeepsyViewModel
-import com.keepsy.app.ui.tutorial.TutorialViewModel
-import com.keepsy.app.ui.tutorial.tutorialSpotlight
 import java.io.File
-import kotlin.ranges.coerceIn
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -44,32 +38,13 @@ fun ItemDetailsScreen(
     itemId: Long,
     viewModel: KeepsyViewModel,
     onPop: () -> Unit,
-    onNavigateToSub: (SubScreen) -> Unit,
-    tutorialViewModel: TutorialViewModel? = null
+    onNavigateToSub: (SubScreen) -> Unit
 ) {
     val context = LocalContext.current
     val itemDetails by viewModel.selectedItem.collectAsStateWithLifecycle()
-    val activityTrail by viewModel.getActivityTrailForItem(itemId).collectAsState(initial = emptyList())
-    val allSpaces by viewModel.spaces.collectAsStateWithLifecycle(emptyList())
+    val activityTrail by viewModel.getActivityTrailForItem(itemId).collectAsStateWithLifecycle(emptyList())
 
-    val scrollState = rememberScrollState()
-    val spacePath = remember(itemDetails?.space, allSpaces) {
-        val details = itemDetails ?: return@remember emptyList<Space>()
-        val path = mutableListOf<Space>()
-        var currentSpace = details.space
-        while (currentSpace != null) {
-            path.add(0, currentSpace)
-            val parentId = currentSpace.parentSpaceId
-            currentSpace = if (parentId != null) {
-                allSpaces.find { it.spaceId == parentId }
-            } else {
-                null
-            }
-        }
-        path
-    }
-
-    var displayDeleteDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(itemId) {
         viewModel.selectItem(itemId)
@@ -77,407 +52,265 @@ fun ItemDetailsScreen(
 
     Scaffold(
         topBar = {
-            val alpha = (scrollState.value / 300f).coerceIn(0f, 1f)
             TopAppBar(
-                title = { 
-                    AnimatedVisibility(
-                        visible = alpha > 0.5f,
-                        enter = fadeIn() + slideInVertically(),
-                        exit = fadeOut() + slideOutVertically()
-                    ) {
-                        Text(
-                            text = itemDetails?.item?.name ?: "",
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                },
+                title = { Text("Item Details", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(
-                        onClick = onPop,
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = if (alpha < 0.5f) Color.Black.copy(alpha = 0.3f) else Color.Transparent
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack, 
-                            contentDescription = "Back",
-                            tint = TextPrimary
-                        )
+                    IconButton(onClick = onPop) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
                     itemDetails?.let { details ->
-                        IconButton(
-                            onClick = { viewModel.toggleItemFavorite(details.item.itemId) },
-                            colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = if (alpha < 0.5f) Color.Black.copy(alpha = 0.3f) else Color.Transparent
-                            )
-                        ) {
+                        IconButton(onClick = { viewModel.toggleItemFavorite(details.item.itemId) }) {
                             Icon(
                                 imageVector = if (details.item.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = "Favorite",
-                                tint = if (details.item.isFavorite) ErrorRed else TextPrimary
+                                tint = if (details.item.isFavorite) ErrorRed else TextSecondary,
+                                contentDescription = "Favorite"
                             )
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Background.copy(alpha = alpha),
-                    scrolledContainerColor = Background
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Background)
             )
         }
     ) { innerPadding ->
         itemDetails?.let { details ->
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(scrollState)
-                    .background(Background)
-                    .padding(bottom = innerPadding.calculateBottomPadding())
+                    .padding(innerPadding)
+                    .background(Background),
+                contentPadding = PaddingValues(24.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                // Large Hero Section
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(360.dp)
-                ) {
-                    if (details.item.photoPath != null && File(details.item.photoPath).exists()) {
-                        AsyncImage(
-                            model = File(details.item.photoPath),
-                            contentDescription = details.item.name,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        val catColor = parseCategoryColor(details.category?.color)
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(catColor.copy(alpha = 0.8f), catColor.copy(alpha = 0.2f))
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = getSmartItemIconVector(details.item.name, details.category?.icon),
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(100.dp)
-                            )
-                        }
-                    }
-                    
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(Color.Transparent, Background.copy(alpha = 0.8f), Background),
-                                    startY = 600f
-                                )
-                            )
-                    )
-                }
-
-                Column(
-                    modifier = Modifier
-                        .padding(horizontal = 24.dp)
-                        .offset(y = (-24).dp)
-                ) {
-                    Surface(
-                        color = parseCategoryColor(details.category?.color).copy(alpha = 0.15f),
-                        contentColor = parseCategoryColor(details.category?.color),
-                        shape = CircleShape,
-                        border = BorderStroke(1.dp, parseCategoryColor(details.category?.color).copy(alpha = 0.3f))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = com.keepsy.app.utils.getCategoryIconVector(details.category?.icon),
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = details.category?.name ?: "Other",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = details.item.name,
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
+                // Photo Section
+                item {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = CardBackground),
-                        shape = RoundedCornerShape(24.dp),
-                        border = BorderStroke(1.dp, BorderColor.copy(alpha = 0.5f))
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(280.dp),
+                        shape = RoundedCornerShape(32.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                     ) {
-                        Column(modifier = Modifier.padding(20.dp)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            if (details.item.photoPath != null && File(details.item.photoPath).exists()) {
+                                AsyncImage(
+                                    model = File(details.item.photoPath),
+                                    contentDescription = details.item.name,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
                                 Box(
                                     modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(PrimaryAccent.copy(alpha = 0.1f)),
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.verticalGradient(
+                                                colors = listOf(PrimaryPurple.copy(alpha = 0.2f), CardBackground)
+                                            )
+                                        ),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Layers,
+                                        imageVector = Icons.Default.Inventory2,
                                         contentDescription = null,
-                                        tint = PrimaryAccent,
-                                        modifier = Modifier.size(18.dp)
+                                        tint = PrimaryPurple.copy(alpha = 0.4f),
+                                        modifier = Modifier.size(80.dp)
                                     )
                                 }
+                            }
+                        }
+                    }
+                }
+
+                // Title & Description
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = details.item.name,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = TextPrimary
+                        )
+                        if (details.item.description.isNotEmpty()) {
+                            Text(
+                                text = details.item.description,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = TextSecondary,
+                                lineHeight = 24.sp
+                            )
+                        }
+                    }
+                }
+
+                // Tags
+                if (details.tags.isNotEmpty()) {
+                    item {
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            details.tags.forEach { tag ->
+                                Surface(
+                                    color = PrimaryAccent.copy(alpha = 0.1f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryAccent.copy(alpha = 0.2f))
+                                ) {
+                                    Text(
+                                        text = "#${tag.name}",
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = PrimaryAccent,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Location Card
+                item {
+                    SectionHeader(title = "Stored In")
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceSecondary),
+                        onClick = {
+                            details.space?.let { onNavigateToSub(SubScreen.SpaceDetails(it.spaceId)) }
+                        }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(PrimaryAccent.copy(alpha = 0.1f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = getSpaceIconVector(details.space?.icon ?: "home"),
+                                    contentDescription = null,
+                                    tint = PrimaryAccent,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Storage Path",
-                                    style = MaterialTheme.typography.titleSmall,
+                                    text = details.space?.name ?: "Unknown Location",
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimary
                                 )
-                            }
-                            
-                            Spacer(modifier = Modifier.height(16.dp))
-                            
-                            if (spacePath.isNotEmpty()) {
-                                FlowRow(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    spacePath.forEachIndexed { index, space ->
-                                        if (index > 0) {
-                                            Icon(
-                                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                                contentDescription = null,
-                                                tint = TextSecondary.copy(alpha = 0.5f),
-                                                modifier = Modifier.size(16.dp).align(Alignment.CenterVertically)
-                                            )
-                                        }
-                                        Surface(
-                                            onClick = { onNavigateToSub(SubScreen.SpaceDetails(space.spaceId)) },
-                                            color = if (space == details.space) PrimaryAccent else Background.copy(alpha = 0.4f),
-                                            contentColor = if (space == details.space) Color.White else TextPrimary,
-                                            shape = RoundedCornerShape(12.dp)
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = getSpaceIconVector(space.icon),
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(14.dp)
-                                                )
-                                                Text(
-                                                    text = space.name,
-                                                    style = MaterialTheme.typography.labelLarge,
-                                                    fontWeight = if (space == details.space) FontWeight.Bold else FontWeight.Medium
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            } else {
                                 Text(
-                                    text = "No location assigned",
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    text = "Tap to view map",
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = TextSecondary
                                 )
                             }
+                            Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null, tint = TextSecondary)
                         }
                     }
+                }
 
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    if (details.item.description != "") {
-                        DetailSection(title = "Description", content = details.item.description)
-                        Spacer(modifier = Modifier.height(24.dp))
-                    }
-
-                    if (details.item.notes != "") {
-                        DetailSection(
-                            title = "Retrieval Notes", 
-                            content = details.item.notes,
-                            isItalic = true,
-                            containerColor = CardBackground.copy(alpha = 0.5f)
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                    }
-
-                    if (details.tags.isNotEmpty()) {
-                        Text(
-                            text = "Labels",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = TextSecondary
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
+                // Notes Section
+                if (details.item.notes.isNotEmpty()) {
+                    item {
+                        SectionHeader(title = "Retrieval Notes")
+                        Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            shape = RoundedCornerShape(24.dp),
+                            color = CardBackground,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor.copy(alpha = 0.5f))
                         ) {
-                            details.tags.forEach { tag ->
-                                SuggestionChip(
-                                    onClick = { /* TODO: Search by tag */ },
-                                    label = { Text("#${tag.name}") },
-                                    colors = SuggestionChipDefaults.suggestionChipColors(
-                                        containerColor = PrimaryAccent.copy(alpha = 0.05f),
-                                        labelColor = PrimaryAccent
-                                    ),
-                                    border = null
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(32.dp))
-                    }
-
-                    Text(
-                        text = "Memory Trail",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = TextSecondary
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    if (activityTrail.isEmpty()) {
-                        Text(
-                            text = "No recent activity recorded.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary.copy(alpha = 0.6f)
-                        )
-                    } else {
-                        activityTrail.forEach { log ->
-                            TimelineCard(log = log, onClickItem = {})
+                            Text(
+                                text = details.item.notes,
+                                modifier = Modifier.padding(20.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary,
+                                lineHeight = 22.sp
+                            )
                         }
                     }
+                }
 
-                    Spacer(modifier = Modifier.height(48.dp))
-
+                // Action Buttons
+                item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Button(
-                            onClick = { onNavigateToSub(SubScreen.MoveItem(details.item.itemId)) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(56.dp)
-                                .then(if (tutorialViewModel != null) Modifier.tutorialSpotlight("move_item_btn", tutorialViewModel) else Modifier),
-                            shape = RoundedCornerShape(20.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent)
-                        ) {
-                            Icon(imageVector = Icons.Default.MultipleStop, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Relocate", fontWeight = FontWeight.Bold)
-                        }
-
-                        OutlinedButton(
-                            onClick = { onNavigateToSub(SubScreen.AddEditItem(itemId = details.item.itemId)) },
-                            modifier = Modifier.weight(1f).height(56.dp),
-                            shape = RoundedCornerShape(20.dp),
-                            border = BorderStroke(1.dp, BorderColor)
-                        ) {
-                            Icon(imageVector = Icons.Default.Edit, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Edit", fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    TextButton(
-                        onClick = { displayDeleteDialog = true },
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        colors = ButtonDefaults.textButtonColors(contentColor = ErrorRed)
-                    ) {
-                        Icon(imageVector = Icons.Default.DeleteOutline, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Move to Trash", fontWeight = FontWeight.Bold)
+                        SecondaryButton(
+                            text = "Move Item",
+                            onClick = { onNavigateToSub(SubScreen.MoveItem(itemId)) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        SecondaryButton(
+                            text = "Edit Info",
+                            onClick = { onNavigateToSub(SubScreen.AddEditItem(itemId)) },
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                     
-                    Spacer(modifier = Modifier.height(48.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    TextButton(
+                        onClick = { showDeleteDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.textButtonColors(contentColor = ErrorRed)
+                    ) {
+                        Icon(imageVector = Icons.Default.DeleteOutline, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Move to Trash")
+                    }
                 }
+
+                // Activity Trail
+                if (activityTrail.isNotEmpty()) {
+                    item {
+                        SectionHeader(title = "Memory Trail")
+                    }
+                    items(activityTrail) { log ->
+                        ActivityLogCard(log = log)
+                    }
+                }
+                
+                item { Spacer(modifier = Modifier.height(40.dp)) }
             }
         }
     }
 
-    if (displayDeleteDialog) {
+    if (showDeleteDialog) {
         AlertDialog(
-            onDismissRequest = { displayDeleteDialog = false },
-            containerColor = CardBackground,
-            titleContentColor = TextPrimary,
-            textContentColor = TextSecondary,
-            title = { Text("Move to Trash?", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
-            text = { Text("This item will be hidden but can be restored from the Trash Bin later.") },
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Move to Trash?") },
+            text = { Text("The item will be moved to your Trash Bin. You can restore it anytime or delete it permanently from there.") },
             confirmButton = {
                 Button(
                     onClick = {
-                        displayDeleteDialog = false
+                        showDeleteDialog = false
                         viewModel.softDeleteSelectedItem {
                             onPop()
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = ErrorRed)
                 ) {
-                    Text("Move to Trash", fontWeight = FontWeight.Bold)
+                    Text("Move to Trash", color = Color.White)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { displayDeleteDialog = false }) {
+                TextButton(onClick = { showDeleteDialog = false }) {
                     Text("Cancel", color = TextSecondary)
                 }
-            }
-        )
-    }
-}
-
-@Composable
-fun DetailSection(
-    title: String,
-    content: String,
-    isItalic: Boolean = false,
-    containerColor: Color = Color.Transparent
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(containerColor)
-            .padding(if (containerColor != Color.Transparent) 16.dp else 0.dp)
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = TextSecondary
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = content,
-            style = MaterialTheme.typography.bodyLarge,
-            color = TextPrimary,
-            fontStyle = if (isItalic) androidx.compose.ui.text.font.FontStyle.Italic else androidx.compose.ui.text.font.FontStyle.Normal,
-            lineHeight = 24.sp
+            },
+            containerColor = CardBackground,
+            titleContentColor = TextPrimary,
+            textContentColor = TextSecondary
         )
     }
 }

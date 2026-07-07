@@ -15,8 +15,6 @@ import com.keepsy.app.service.FirebaseService
 import com.keepsy.app.sync.FirestoreService
 import com.keepsy.app.sync.SyncManager
 import com.keepsy.app.sync.SyncRepository
-import com.keepsy.app.ui.tutorial.TutorialStep
-import com.keepsy.app.ui.tutorial.TutorialViewModel
 import com.keepsy.app.monetization.MonetizationProvider
 import com.keepsy.app.monetization.MonetizationRepository
 import kotlinx.coroutines.Dispatchers
@@ -46,16 +44,6 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
 
     private val settingsManager = SettingsManager(application)
     
-    val tutorialViewModel = TutorialViewModel(settingsManager) {
-        // Sync tutorial completion to cloud
-        viewModelScope.launch {
-            try {
-                val data = HashMap<String, Any>()
-                data["tutorialCompleted"] = true
-                firestoreService.updateProfile(data)
-            } catch (e: Exception) { /* Non-fatal */ }
-        }
-    }
     private val backupManager = BackupManager(application, db.appDao())
     val monetizationRepository: MonetizationRepository = MonetizationProvider.getRepository(application)
 
@@ -72,14 +60,6 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
 
     // App Preferences
     val isOnboardingCompleted = settingsManager.isOnboardingCompleted
-    val isTutorialCompleted = settingsManager.isTutorialCompleted
-    
-    private val _isTutorialRequested = MutableStateFlow(false)
-    val isTutorialRequested: StateFlow<Boolean> = _isTutorialRequested.asStateFlow()
-
-    fun requestTutorial(requested: Boolean) {
-        _isTutorialRequested.value = requested
-    }
     val darkModePreference = settingsManager.darkModePreference
 
     // Database source streams
@@ -100,7 +80,7 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
         KeepsyLogger.i("Purging all local data for security identity isolation...")
         withContext(Dispatchers.IO) {
             try {
-                // Reset settings (onboarding, tutorial, etc)
+                // Reset settings (onboarding, etc)
                 settingsManager.resetSettings()
                 // Clear secure data
                 securityService.clearSecureData()
@@ -385,37 +365,17 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
             // 2. Check if the user has a Root Space in the newly restored Room DB
             val rootSpaces = db.appDao().getLiveSpaces().first()
             if (rootSpaces.isNotEmpty()) {
-                // If they have data, they are definitely NOT a new user.
                 settingsManager.setOnboardingCompleted(true)
-                settingsManager.setTutorialCompleted(true)
-                
-                // Sync status to cloud just in case
-                viewModelScope.launch {
-                    try {
-                        val data = HashMap<String, Any>()
-                        data["onboardingCompleted"] = true
-                        data["tutorialCompleted"] = true
-                        firestoreService.updateProfile(data)
-                    } catch (e: Exception) { /* Non-fatal */ }
-                }
             } else {
                 // 3. If no local data, check Firestore profile explicitly
                 val profile = firestoreService.getProfile()
                 val cloudOnboardingDone = profile?.get("onboardingCompleted") as? Boolean ?: false
-                val cloudTutorialDone = profile?.get("tutorialCompleted") as? Boolean ?: false
                 
                 if (cloudOnboardingDone) {
                     settingsManager.setOnboardingCompleted(true)
-                    // If they finished onboarding before, but no tutorial flag, 
-                    // it depends if we want to show it. 
-                    // But if they have items (which we checked above), they skip it.
-                    if (cloudTutorialDone) {
-                        settingsManager.setTutorialCompleted(true)
-                    }
                 } else {
                     // This is a truly fresh account
                     settingsManager.setOnboardingCompleted(false)
-                    settingsManager.setTutorialCompleted(false)
                 }
             }
         } catch (e: Exception) {
