@@ -92,9 +92,19 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
                         
                         if (onboarding) {
                             if (tutorial) {
+                                KeepsyLogger.i("KeepsyApp: Tutorial done, going to Dashboard")
                                 appScreen = Screen.Dashboard
                             } else {
-                                appScreen = Screen.Tutorial
+                                // For returning users, check if they have items before showing tutorial
+                                val hasItems = viewModel.activeItems.first().isNotEmpty()
+                                if (hasItems) {
+                                    KeepsyLogger.i("KeepsyApp: Returning user with items, skipping tutorial")
+                                    viewModel.tutorialViewModel.skipTutorial()
+                                    appScreen = Screen.Dashboard
+                                } else {
+                                    KeepsyLogger.i("KeepsyApp: New user without items, starting Tutorial")
+                                    appScreen = Screen.Tutorial
+                                }
                             }
                         } else {
                             appScreen = Screen.Onboarding
