@@ -35,6 +35,7 @@ import com.keepsy.app.ui.components.*
 import com.keepsy.app.ui.theme.*
 import com.keepsy.app.utils.getSpaceIconLabel
 import com.keepsy.app.utils.getSpaceIconVector
+import com.keepsy.app.ui.tutorial.tutorialSpotlight
 import com.keepsy.app.viewmodel.KeepsyViewModel
 import kotlinx.coroutines.flow.first
 import java.io.File
@@ -364,7 +365,9 @@ fun AddEditSpaceScreen(
                         Toast.makeText(context, "Space name is required", Toast.LENGTH_SHORT).show()
                     }
                 },
-                modifier = Modifier.testTag("submit_space_form_btn")
+                modifier = Modifier
+                    .testTag("submit_space_form_btn")
+                    .tutorialSpotlight("submit_space_form_btn", viewModel.tutorialViewModel)
             )
             
             Spacer(modifier = Modifier.height(32.dp))

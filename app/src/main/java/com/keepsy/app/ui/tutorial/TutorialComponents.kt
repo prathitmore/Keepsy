@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -101,6 +102,7 @@ fun TutorialOverlay(
                 .fillMaxWidth()
                 .height(with(density) { maxOf(0f, rect.top).toDp() })
                 .pointerInput(Unit) { awaitPointerEventScope { while(true) { awaitPointerEvent().changes.forEach { it.consume() } } } }
+                .zIndex(100f)
             )
             
             // Bottom Blocker
@@ -109,6 +111,7 @@ fun TutorialOverlay(
                 .fillMaxWidth()
                 .height(with(density) { maxOf(0f, screenHeightPx - rect.bottom).toDp() })
                 .pointerInput(Unit) { awaitPointerEventScope { while(true) { awaitPointerEvent().changes.forEach { it.consume() } } } }
+                .zIndex(100f)
             )
             
             // Left Blocker
@@ -117,6 +120,7 @@ fun TutorialOverlay(
                 .width(with(density) { maxOf(0f, rect.left).toDp() })
                 .height(with(density) { rect.height.toDp() })
                 .pointerInput(Unit) { awaitPointerEventScope { while(true) { awaitPointerEvent().changes.forEach { it.consume() } } } }
+                .zIndex(100f)
             )
             
             // Right Blocker
@@ -125,6 +129,7 @@ fun TutorialOverlay(
                 .width(with(density) { maxOf(0f, screenWidthPx - rect.right).toDp() })
                 .height(with(density) { rect.height.toDp() })
                 .pointerInput(Unit) { awaitPointerEventScope { while(true) { awaitPointerEvent().changes.forEach { it.consume() } } } }
+                .zIndex(100f)
             )
 
             // Optional: Internal tapping for informational steps
@@ -275,9 +280,9 @@ fun TutorialBubble(
             val stepIcon = when (step) {
                 TutorialStep.WELCOME -> Icons.Default.WavingHand
                 TutorialStep.INTERFACE_OVERVIEW -> Icons.Default.Dashboard
-                TutorialStep.SPACE_INTRO -> Icons.Default.Layers
+                TutorialStep.SPACE_TAB_INTRO, TutorialStep.SPACE_INTRO, TutorialStep.SPACE_FORM_DETAILS -> Icons.Default.Layers
                 TutorialStep.SUBSPACE_INTRO -> Icons.Default.AccountTree
-                TutorialStep.ITEM_INTRO -> Icons.Default.Inventory2
+                TutorialStep.ITEM_INTRO, TutorialStep.ITEM_FORM_DETAILS -> Icons.Default.Inventory2
                 TutorialStep.RETRIEVAL_INTRO -> Icons.Default.Search
                 TutorialStep.COMPLETION -> Icons.Default.CheckCircle
             }

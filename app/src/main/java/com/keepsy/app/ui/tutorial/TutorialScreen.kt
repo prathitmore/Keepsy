@@ -109,7 +109,17 @@ fun TutorialScreen(
                 currentTab = currentTab,
                 onTabSelected = { currentTab = it },
                 currentSubScreen = currentSubScreen,
-                onNavigateToSub = { subScreenHistory.add(it) },
+                    onNavigateToSub = { sub ->
+                        subScreenHistory.add(sub)
+                        // Auto-advance tutorial when navigating into specific screens
+                        if (currentStep == TutorialStep.SPACE_INTRO && sub is SubScreen.AddEditSpace) {
+                            tutorialViewModel.nextStep()
+                        } else if (currentStep == TutorialStep.ITEM_INTRO && sub is SubScreen.AddEditItem) {
+                            tutorialViewModel.nextStep()
+                        } else if (currentStep == TutorialStep.SUBSPACE_INTRO && sub is SubScreen.AddEditSpace) {
+                            tutorialViewModel.nextStep()
+                        }
+                    },
                 onPopSub = { 
                     if (subScreenHistory.isNotEmpty()) {
                         subScreenHistory.removeAt(subScreenHistory.size - 1)
