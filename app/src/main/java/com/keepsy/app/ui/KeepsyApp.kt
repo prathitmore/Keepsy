@@ -32,6 +32,8 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
 
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     val isRestoringData by viewModel.isRestoringData.collectAsStateWithLifecycle()
+    val onboardingDone by viewModel.isOnboardingCompleted.collectAsStateWithLifecycle()
+    val isStatusChecked by viewModel.isStatusChecked.collectAsStateWithLifecycle()
     
     var appScreen by remember { mutableStateOf<Screen>(Screen.Splash) }
     var authSubScreen by remember { mutableStateOf<AuthSubScreen>(AuthSubScreen.Welcome) }
@@ -55,29 +57,26 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
         return false
     }
 
-    val onboardingDone by viewModel.isOnboardingCompleted.collectAsStateWithLifecycle()
-    val isRestoring by viewModel.isRestoringData.collectAsStateWithLifecycle()
-    val isStatusChecked by viewModel.isStatusChecked.collectAsStateWithLifecycle()
-
-    // 1. Monitor state changes to decide on screen transitions
-    LaunchedEffect(authState, isSplashAnimationComplete, onboardingDone, isRestoring, isStatusChecked) {
+    // Navigation logic observer
+    LaunchedEffect(authState, isSplashAnimationComplete, onboardingDone, isRestoringData, isStatusChecked) {
         if (!isSplashAnimationComplete) return@LaunchedEffect
         
-        KeepsyLogger.d("KeepsyApp: Navigating - Auth: $authState, Onboarding: $onboardingDone, Restoring: $isRestoring, Checked: $isStatusChecked")
+        val currentAuth = authState
+        KeepsyLogger.d("KeepsyApp: Navigating - Auth: $currentAuth, Onboarding: $onboardingDone, Restoring: $isRestoringData, Checked: $isStatusChecked")
         
-        when (authState) {
+        when (currentAuth) {
             is AuthState.Authenticated -> {
-                val user = (authState as AuthState.Authenticated).user
+                val user = currentAuth.user
                 if (!user.isEmailVerified) {
                     appScreen = Screen.VerifyEmail
                 } else {
-                    // While checking cloud status, stay on success screen
-                    if (isRestoring || !isStatusChecked) {
+                    // While checking cloud status or syncing, stay on success screen
+                    if (isRestoringData || !isStatusChecked) {
                         if (appScreen !is Screen.AuthSuccess && appScreen != Screen.Dashboard) {
                             appScreen = Screen.AuthSuccess(user.name ?: user.email ?: "Friend")
                         }
                     } else {
-                        // Check is complete
+                        // Check is complete, decide final destination
                         if (onboardingDone) {
                             appScreen = Screen.Dashboard
                         } else {
@@ -120,8 +119,9 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
     }
 
     LaunchedEffect(authState) {
-        if (authState is AuthState.Error) {
-            snackbarHostState.showSnackbar((authState as AuthState.Error).message)
+        val currentAuth = authState
+        if (currentAuth is AuthState.Error) {
+            snackbarHostState.showSnackbar(currentAuth.message)
         }
     }
 

@@ -46,27 +46,38 @@ class SyncRepository(
     }
 
     suspend fun isUserAlreadyExistsOnCloud(): Boolean = withContext(Dispatchers.IO) {
-        if (auth.currentUser == null) return@withContext false
+        val uid = auth.currentUser?.uid
+        if (uid == null) {
+            KeepsyLogger.w("CloudCheck: No UID found")
+            return@withContext false
+        }
+        
+        KeepsyLogger.i("CloudCheck: Scanning account for $uid")
         try {
             // 1. Check Profile
             val profile = firestoreService.getProfile()
-            if (profile != null && (profile["onboardingCompleted"] as? Boolean == true)) return@withContext true
+            if (profile != null) {
+                KeepsyLogger.d("CloudCheck: Profile found")
+                if (profile["onboardingCompleted"] as? Boolean == true) {
+                    KeepsyLogger.i("CloudCheck: Onboarding flag found in profile")
+                    return@withContext true
+                }
+            }
             
-            // 2. Check Spaces Collection
-            val spaces = firestoreService.getAllEntities("spaces")
-            if (spaces.isNotEmpty()) return@withContext true
+            // 2. Deep scan collections
+            val collections = listOf("spaces", "items", "activityLogs")
+            for (coll in collections) {
+                val entities = firestoreService.getAllEntities(coll)
+                if (entities.isNotEmpty()) {
+                    KeepsyLogger.i("CloudCheck: Found ${entities.size} entities in $coll")
+                    return@withContext true
+                }
+            }
             
-            // 3. Check Items Collection
-            val items = firestoreService.getAllEntities("items")
-            if (items.isNotEmpty()) return@withContext true
-            
-            // 4. Check Activity Logs
-            val logs = firestoreService.getAllEntities("activityLogs")
-            if (logs.isNotEmpty()) return@withContext true
-            
+            KeepsyLogger.i("CloudCheck: No data found in any collection")
             false
         } catch (e: Exception) {
-            KeepsyLogger.e("Error checking cloud user existence", e)
+            KeepsyLogger.e("CloudCheck: Error during scanning", e)
             false
         }
     }

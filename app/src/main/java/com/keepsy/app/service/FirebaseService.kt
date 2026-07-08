@@ -105,16 +105,19 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         try {
             val result = auth.signInWithCredential(credential).await()
             val firebaseUser = result.user ?: throw Exception("Credential sign in failed: no user")
-            KeepsyLogger.i("signInWithCredential: success for ${firebaseUser.uid}")
+            val isNewUser = result.additionalUserInfo?.isNewUser ?: false
+            
+            KeepsyLogger.i("signInWithCredential: success for ${firebaseUser.uid}, isNewUser: $isNewUser")
             val user = User(
                 uid = firebaseUser.uid,
                 name = firebaseUser.displayName,
                 email = firebaseUser.email,
                 photoUrl = firebaseUser.photoUrl?.toString(),
                 isAnonymous = firebaseUser.isAnonymous,
-                isEmailVerified = firebaseUser.isEmailVerified
+                isEmailVerified = firebaseUser.isEmailVerified,
+                createdAt = if (isNewUser) System.currentTimeMillis() else null
             )
-            updateUserProfile(user)
+            updateUserProfile(user, isNewUser = isNewUser)
             logEvent("login", "google")
             return user
         } catch (e: Exception) {

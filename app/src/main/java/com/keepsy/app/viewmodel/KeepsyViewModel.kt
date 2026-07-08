@@ -18,6 +18,7 @@ import com.keepsy.app.sync.SyncRepository
 import com.keepsy.app.monetization.MonetizationProvider
 import com.keepsy.app.monetization.MonetizationRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import com.keepsy.app.service.SecurityService
@@ -361,7 +362,11 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
     val isRestoringData: StateFlow<Boolean> = _isRestoringData.asStateFlow()
 
     suspend fun checkOnboardingStatus() {
-        if (_isRestoringData.value) return
+        if (_isRestoringData.value) {
+            // If already checking, wait for it to finish
+            while (_isRestoringData.value) { delay(100) }
+            return
+        }
         
         val currentUid = firebaseService.getCurrentUser()?.uid
         val lastUid = settingsManager.lastUserId.value
@@ -401,11 +406,11 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
                     settingsManager.setOnboardingCompleted(false)
                 }
             }
-            _isStatusChecked.value = true
         } catch (e: Exception) {
             KeepsyLogger.e("Failed to check onboarding status", e)
             handleError(e)
         } finally {
+            _isStatusChecked.value = true
             _isRestoringData.value = false
         }
     }
