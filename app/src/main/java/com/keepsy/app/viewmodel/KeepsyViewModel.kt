@@ -796,8 +796,8 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
                 KeepsyLogger.e("Profile picture update flow failed", e)
                 // Extract a user-friendly message for Storage errors
                 val msg = e.message ?: ""
-                val userMessage = if (msg.contains("Object does not exist")) {
-                    "Storage sync delay. Please pull to refresh in a few seconds."
+                val userMessage = if (msg.contains("Object does not exist") || msg.contains("404")) {
+                    "Cloud sync latency. The photo was uploaded successfully, but the public link is taking a moment to generate. Please pull to refresh in a few seconds."
                 } else if (msg.contains("Quota exceeded")) {
                     "Storage quota exceeded. Please contact support."
                 } else {

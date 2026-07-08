@@ -79,39 +79,48 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         val uid = auth.currentUser?.uid ?: throw Exception("No user authenticated")
         KeepsyLogger.i("Starting upload to Firebase Storage for user: $uid")
         
-        // Using a timestamped path to prevent 404s caused by eventual consistency or CDN caching
         val timestamp = System.currentTimeMillis()
         val storagePath = "users/$uid/profile/avatar_$timestamp.jpg"
         val ref = storage.reference.child(storagePath)
         
         try {
+            val context = com.keepsy.app.KeepsyApplication.instance
+            val inputStream = context.contentResolver.openInputStream(uri) ?: throw Exception("Failed to open image stream")
+            
+            val outputStream = java.io.ByteArrayOutputStream()
+            val buffer = ByteArray(4096)
+            var bytesRead = inputStream.read(buffer)
+            while (bytesRead != -1) {
+                outputStream.write(buffer, 0, bytesRead)
+                bytesRead = inputStream.read(buffer)
+            }
+            val bytes = outputStream.toByteArray()
+            inputStream.close()
+
             val metadata = StorageMetadata.Builder()
                 .setContentType("image/jpeg")
                 .setCustomMetadata("uid", uid)
                 .build()
 
-            KeepsyLogger.d("Executing putFile to $storagePath")
-            // Uploading file directly with metadata
-            ref.putFile(uri, metadata).await()
+            KeepsyLogger.d("Executing putBytes to $storagePath")
+            ref.putBytes(bytes, metadata).await()
             KeepsyLogger.i("Physical file written to Storage: $storagePath")
             
-            // Wait briefly to ensure indexing is complete
-            delay(1000)
-            
             var downloadUrl: String? = null
-            var retryCount = 0
-            while (downloadUrl == null && retryCount < 3) {
+            var lastError: Exception? = null
+            
+            for (attempt in 1..5) {
                 try {
+                    delay(500L * attempt)
                     downloadUrl = ref.downloadUrl.await().toString()
-                    KeepsyLogger.d("Download URL retrieved: $downloadUrl")
+                    if (downloadUrl != null) break
                 } catch (e: Exception) {
-                    retryCount++
-                    KeepsyLogger.w("Download URL retrieval failed, retrying ($retryCount)...")
-                    delay(1500)
+                    lastError = e
+                    KeepsyLogger.w("Download URL retrieval retry $attempt failed: ${e.message}")
                 }
             }
             
-            return downloadUrl ?: throw Exception("Failed to retrieve download URL after multiple attempts")
+            return downloadUrl ?: throw lastError ?: Exception("Failed to retrieve download URL")
         } catch (e: Exception) {
             KeepsyLogger.e("Firebase Storage pipeline failed", e)
             throw e
@@ -122,19 +131,17 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         val uid = auth.currentUser?.uid ?: throw Exception("No user authenticated")
         KeepsyLogger.i("Requested deletion of profile picture for user: $uid")
         
-        // We update the pointers first to immediately refresh UI fallbacks
         updateProfile(null, "")
         
-        // Cleaning up the storage folder is best-effort and happens in background
         try {
             val folderRef = storage.reference.child("users/$uid/profile/")
-            folderRef.listAll().addOnSuccessListener { listResult ->
-                for (item in listResult.items) {
-                    item.delete()
-                }
+            val listResult = folderRef.listAll().await()
+            val items = listResult.items
+            for (i in 0..items.size - 1) {
+                items[i].delete()
             }
         } catch (e: Exception) {
-            KeepsyLogger.d("Storage cleanup skipped: ${e.message}")
+            KeepsyLogger.w("Storage cleanup skipped: ${e.message}")
         }
     }
 
