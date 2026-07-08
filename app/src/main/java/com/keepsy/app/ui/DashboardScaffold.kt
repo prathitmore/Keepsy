@@ -26,6 +26,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.keepsy.app.navigation.SubScreen
 import com.keepsy.app.navigation.TabScreen
@@ -272,23 +274,16 @@ fun PremiumTopBar(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
         ) {
             Box(contentAlignment = Alignment.Center) {
-                if (profile?.photoUrl != null) {
-                    // Photo placeholder
-                    Icon(
-                        imageVector = Icons.Default.Person,
+                if (profile?.photoUrl != null && profile?.photoUrl != "") {
+                    AsyncImage(
+                        model = profile?.photoUrl,
                         contentDescription = "Account",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
                 } else {
-                    val initials = remember(profile?.name) {
-                        val n = profile?.name ?: "U"
-                        if (n != "") {
-                            n[0].toString()
-                        } else "U"
-                    }
                     Text(
-                        text = initials,
+                        text = com.keepsy.app.utils.AvatarUtils.getInitials(profile?.name),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary

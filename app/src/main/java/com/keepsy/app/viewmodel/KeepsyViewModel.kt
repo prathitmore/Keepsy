@@ -769,6 +769,7 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             try {
                 accountRepository.updateProfile(name, displayName)
+                repository.refreshAuthState()
                 _refreshTrigger.value = System.currentTimeMillis()
             } catch (e: Exception) {
                 handleError(e)
@@ -779,8 +780,27 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
     fun updateProfilePicture(uri: Uri) {
         viewModelScope.launch {
             try {
-                val url = accountRepository.uploadProfilePhoto(uri)
+                KeepsyLogger.i("Starting profile picture update flow for $uri")
+                val compressedUri = com.keepsy.app.utils.ImageUtils.compressImage(getApplication(), uri)
+                val uploadUri = compressedUri ?: uri
+                
+                val url = accountRepository.uploadProfilePhoto(uploadUri)
                 accountRepository.updateProfile(null, url)
+                repository.refreshAuthState()
+                _refreshTrigger.value = System.currentTimeMillis()
+                KeepsyLogger.i("Profile picture update flow completed successfully")
+            } catch (e: Exception) {
+                KeepsyLogger.e("Profile picture update flow failed", e)
+                handleError(e)
+            }
+        }
+    }
+
+    fun removeProfilePicture() {
+        viewModelScope.launch {
+            try {
+                accountRepository.deleteProfilePhoto()
+                repository.refreshAuthState()
                 _refreshTrigger.value = System.currentTimeMillis()
             } catch (e: Exception) {
                 handleError(e)

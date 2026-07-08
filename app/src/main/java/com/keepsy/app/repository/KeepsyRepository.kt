@@ -30,6 +30,13 @@ class KeepsyRepository(
         }
     }
 
+    fun refreshAuthState() {
+        val user = firebaseService.getCurrentUser()
+        if (user != null) {
+            _authState.value = AuthState.Authenticated(user)
+        }
+    }
+
     suspend fun reloadUserVerification(): Boolean = withContext(Dispatchers.IO) {
         val isVerified = firebaseService.reloadUser()
         val currentUser = firebaseService.getCurrentUser()

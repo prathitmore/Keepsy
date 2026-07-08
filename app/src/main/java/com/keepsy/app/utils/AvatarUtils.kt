@@ -6,27 +6,18 @@ object AvatarUtils {
     fun getInitials(fullName: String?): String {
         if (fullName == null || fullName.isEmpty()) return "U"
         
-        val trimmed = fullName.trim()
-        if (trimmed.isEmpty()) return "U"
+        val name = fullName.trim()
+        if (name.isEmpty()) return "U"
         
-        val parts = trimmed.split(" ")
-        val filtered = parts.filter { it.isNotEmpty() }
+        val firstChar = name[0].toString()
+        var lastChar = ""
         
-        return when {
-            filtered.size >= 2 -> {
-                val first = filtered[0].substring(0, 1).uppercase(Locale.getDefault())
-                val last = filtered[filtered.size - 1].substring(0, 1).uppercase(Locale.getDefault())
-                "$first$last"
-            }
-            filtered.size == 1 -> {
-                val name = filtered[0]
-                if (name.length >= 2) {
-                    name.substring(0, 2).uppercase(Locale.getDefault())
-                } else {
-                    name.uppercase(Locale.getDefault())
-                }
-            }
-            else -> "U"
+        // Find first space and get next char
+        val spaceIndex = name.indexOf(' ')
+        if (spaceIndex != -1 && spaceIndex + 1 < name.length) {
+            lastChar = name[spaceIndex + 1].toString()
         }
+        
+        return (firstChar + lastChar).uppercase(Locale.ROOT)
     }
 }

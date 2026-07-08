@@ -16,6 +16,10 @@ class AccountRepository(
         return firebaseService.uploadProfilePicture(uri)
     }
 
+    suspend fun deleteProfilePhoto() {
+        firebaseService.deleteProfilePicture()
+    }
+
     suspend fun updateProfile(name: String?, photoUrl: String?) {
         firebaseService.updateProfile(name, photoUrl)
     }

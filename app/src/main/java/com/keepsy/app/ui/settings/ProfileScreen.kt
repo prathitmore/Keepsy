@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -24,8 +25,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.keepsy.app.navigation.SubScreen
-import com.keepsy.app.ui.components.*
 import com.keepsy.app.ui.theme.*
+import com.keepsy.app.utils.AvatarUtils
 import com.keepsy.app.viewmodel.KeepsyViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -88,14 +89,12 @@ fun ProfileScreen(
                                 AsyncImage(
                                     model = p.photoUrl,
                                     contentDescription = "Avatar",
-                                    modifier = Modifier.fillMaxSize()
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
                                 )
                             } else {
-                                val initial = remember(p.name) {
-                                    if (p.name != "") p.name[0].toString() else "U"
-                                }
                                 Text(
-                                    text = initial,
+                                    text = AvatarUtils.getInitials(p.name),
                                     color = Color.White,
                                     style = MaterialTheme.typography.headlineMedium,
                                     fontWeight = FontWeight.ExtraBold

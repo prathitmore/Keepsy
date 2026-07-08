@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -27,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.keepsy.app.ui.components.*
 import com.keepsy.app.ui.theme.*
+import com.keepsy.app.utils.AvatarUtils
 import com.keepsy.app.viewmodel.KeepsyViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,10 +42,46 @@ fun EditProfileScreen(
     var name by remember(profile) { mutableStateOf(profile?.name ?: "") }
     var displayName by remember(profile) { mutableStateOf(profile?.displayName ?: "") }
 
+    var showPhotoOptions by remember { mutableStateOf(false) }
+
     val photoLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let { viewModel.updateProfilePicture(it) }
+    }
+
+    if (showPhotoOptions) {
+        ModalBottomSheet(
+            onDismissRequest = { showPhotoOptions = false },
+            containerColor = SurfaceSecondary,
+            dragHandle = { BottomSheetDefaults.DragHandle(color = BorderColor) }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 40.dp)
+            ) {
+                Text("Profile Photo", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                PhotoOptionItem(Icons.Default.PhotoLibrary, "Choose from Gallery") {
+                    showPhotoOptions = false
+                    photoLauncher.launch("image/*")
+                }
+                
+                if (profile?.photoUrl != null && profile?.photoUrl != "") {
+                    PhotoOptionItem(Icons.Default.Delete, "Remove Photo", color = ErrorRed) {
+                        showPhotoOptions = false
+                        viewModel.removeProfilePicture()
+                    }
+                }
+                
+                PhotoOptionItem(Icons.Default.Close, "Cancel") {
+                    showPhotoOptions = false
+                }
+            }
+        }
     }
 
     Scaffold(
@@ -87,7 +125,8 @@ fun EditProfileScreen(
                             Brush.linearGradient(
                                 colors = listOf(PrimaryPurple, PrimaryAccent)
                             )
-                        ),
+                        )
+                        .clickable { showPhotoOptions = true },
                     contentAlignment = Alignment.Center
                 ) {
                     if (profile?.photoUrl != null && profile?.photoUrl != "") {
@@ -98,11 +137,8 @@ fun EditProfileScreen(
                             contentScale = ContentScale.Crop
                         )
                     } else {
-                        val initial = remember(name) {
-                            if (name != "") name[0].toString() else "U"
-                        }
                         Text(
-                            text = initial,
+                            text = AvatarUtils.getInitials(name),
                             color = Color.White,
                             style = MaterialTheme.typography.displaySmall,
                             fontWeight = FontWeight.ExtraBold
@@ -111,7 +147,7 @@ fun EditProfileScreen(
                 }
                 
                 IconButton(
-                    onClick = { photoLauncher.launch("image/*") },
+                    onClick = { showPhotoOptions = true },
                     modifier = Modifier
                         .size(32.dp)
                         .clip(CircleShape)
@@ -131,7 +167,7 @@ fun EditProfileScreen(
             )
 
             KeepsyTextField(
-                value = displayName ?: "",
+                value = displayName,
                 onValueChange = { displayName = it },
                 label = "Display Name (Public)",
                 leadingIcon = Icons.Default.Badge
@@ -152,5 +188,20 @@ fun EditProfileScreen(
                 modifier = Modifier.padding(top = 8.dp)
             )
         }
+    }
+}
+
+@Composable
+fun PhotoOptionItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: Color = TextPrimary, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = null, tint = color.copy(alpha = 0.7f))
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(label, style = MaterialTheme.typography.bodyLarge, color = color, fontWeight = FontWeight.Medium)
     }
 }

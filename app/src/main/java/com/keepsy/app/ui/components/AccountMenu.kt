@@ -17,13 +17,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.keepsy.app.model.UserProfile
 import com.keepsy.app.navigation.SubScreen
 import com.keepsy.app.ui.theme.*
+import com.keepsy.app.utils.AvatarUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,15 +75,21 @@ fun AccountBottomSheet(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        val initials = remember(p.name) {
-                            if (p.name == "") "U" else p.name[0].toString()
+                        if (p.photoUrl != null && p.photoUrl != "") {
+                            AsyncImage(
+                                model = p.photoUrl,
+                                contentDescription = "Profile Photo",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text(
+                                text = AvatarUtils.getInitials(p.name),
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
-                        Text(
-                            text = initials,
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
                     }
                     
                     Spacer(modifier = Modifier.width(16.dp))
@@ -109,19 +118,15 @@ fun AccountBottomSheet(
             
             MenuSection(title = "ACCOUNT") {
                 AccountMenuItem(Icons.Default.Person, "My Profile", "Detailed account info", onClick = {
-                    onClose()
                     onNavigateToSub(SubScreen.Profile)
                 })
                 AccountMenuItem(Icons.Default.Edit, "Edit Profile", "Change name & photo", onClick = {
-                    onClose()
                     onNavigateToSub(SubScreen.EditProfile)
                 })
                 AccountMenuItem(Icons.Default.Backup, "Backup & Sync", "Secure your memories", onClick = {
-                    onClose()
                     onNavigateToSub(SubScreen.BackupSync)
                 })
                 AccountMenuItem(Icons.Default.CardMembership, "Subscription", "Manage premium access", onClick = {
-                    onClose()
                     onNavigateToSub(SubScreen.Subscription)
                 })
             }
@@ -130,7 +135,6 @@ fun AccountBottomSheet(
             
             MenuSection(title = "SECURITY & SYSTEM") {
                 AccountMenuItem(Icons.Default.Security, "Security Center", "Password & device info", onClick = {
-                    onClose()
                     onNavigateToSub(SubScreen.SecurityCenter)
                 })
             }
