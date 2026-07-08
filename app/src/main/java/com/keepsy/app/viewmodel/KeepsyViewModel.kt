@@ -784,6 +784,9 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
                 val compressedUri = com.keepsy.app.utils.ImageUtils.compressImage(getApplication(), uri)
                 val uploadUri = compressedUri ?: uri
                 
+                // Clear any existing error state before starting
+                _errorState.value = null
+                
                 val url = accountRepository.uploadProfilePhoto(uploadUri)
                 accountRepository.updateProfile(null, url)
                 repository.refreshAuthState()
@@ -791,7 +794,16 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
                 KeepsyLogger.i("Profile picture update flow completed successfully")
             } catch (e: Exception) {
                 KeepsyLogger.e("Profile picture update flow failed", e)
-                handleError(e)
+                // Extract a user-friendly message for Storage errors
+                val msg = e.message ?: ""
+                val userMessage = if (msg.contains("Object does not exist")) {
+                    "Storage sync delay. Please pull to refresh in a few seconds."
+                } else if (msg.contains("Quota exceeded")) {
+                    "Storage quota exceeded. Please contact support."
+                } else {
+                    e.localizedMessage ?: "Failed to upload photo"
+                }
+                _errorState.value = KeepsyError.AuthError(userMessage)
             }
         }
     }

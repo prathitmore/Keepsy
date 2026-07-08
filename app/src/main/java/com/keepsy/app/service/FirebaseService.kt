@@ -15,12 +15,13 @@ import com.keepsy.app.model.User
 import com.keepsy.app.utils.KeepsyLogger
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
+import java.util.HashMap
 
 class FirebaseService(private val analytics: FirebaseAnalytics) {
 
     private val auth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
-    private val storage = FirebaseStorage.getInstance()
+    private val storage = FirebaseStorage.getInstance("gs://keepsy-project.firebasestorage.app")
     private val crashlytics = FirebaseCrashlytics.getInstance()
 
     fun getCurrentUser(): User? {
@@ -62,7 +63,6 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
             KeepsyLogger.e("Auth update failed", e)
         }
         
-        // Also update Firestore
         val updates = HashMap<String, Any?>()
         if (name != null) updates["displayName"] = name
         if (photoUrl != null) {
@@ -79,7 +79,9 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         val uid = auth.currentUser?.uid ?: throw Exception("No user authenticated")
         KeepsyLogger.i("Starting upload to Firebase Storage for user: $uid")
         
-        val storagePath = "users/$uid/profile/avatar.jpg"
+        // Using a timestamped path to prevent 404s caused by eventual consistency or CDN caching
+        val timestamp = System.currentTimeMillis()
+        val storagePath = "users/$uid/profile/avatar_$timestamp.jpg"
         val ref = storage.reference.child(storagePath)
         
         try {
@@ -89,29 +91,29 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
                 .build()
 
             KeepsyLogger.d("Executing putFile to $storagePath")
+            // Uploading file directly with metadata
             ref.putFile(uri, metadata).await()
-            KeepsyLogger.i("Upload completed successfully to $storagePath")
+            KeepsyLogger.i("Physical file written to Storage: $storagePath")
             
-            // Eventual consistency protection
+            // Wait briefly to ensure indexing is complete
+            delay(1000)
+            
             var downloadUrl: String? = null
             var retryCount = 0
-            val maxRetries = 3
-            
-            while (downloadUrl == null && retryCount < maxRetries) {
+            while (downloadUrl == null && retryCount < 3) {
                 try {
                     downloadUrl = ref.downloadUrl.await().toString()
-                    KeepsyLogger.d("Successfully retrieved download URL: $downloadUrl")
+                    KeepsyLogger.d("Download URL retrieved: $downloadUrl")
                 } catch (e: Exception) {
                     retryCount++
-                    KeepsyLogger.w("Retrying download URL retrieval (attempt $retryCount)...")
-                    delay(1000)
-                    if (retryCount >= maxRetries) throw e
+                    KeepsyLogger.w("Download URL retrieval failed, retrying ($retryCount)...")
+                    delay(1500)
                 }
             }
             
-            return downloadUrl ?: throw Exception("Failed to retrieve download URL after retries")
+            return downloadUrl ?: throw Exception("Failed to retrieve download URL after multiple attempts")
         } catch (e: Exception) {
-            KeepsyLogger.e("CRITICAL: Firebase Storage Upload/Download Failed", e)
+            KeepsyLogger.e("Firebase Storage pipeline failed", e)
             throw e
         }
     }
@@ -120,32 +122,20 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         val uid = auth.currentUser?.uid ?: throw Exception("No user authenticated")
         KeepsyLogger.i("Requested deletion of profile picture for user: $uid")
         
-        val storagePath = "users/$uid/profile/avatar.jpg"
-        val ref = storage.reference.child(storagePath)
-        
-        try {
-            ref.delete().await()
-            KeepsyLogger.i("Physical file deleted from Storage: $storagePath")
-        } catch (e: Exception) {
-            val msg = e.message ?: ""
-            if (msg.contains("Object does not exist")) {
-                KeepsyLogger.i("Deletion skipped: File already non-existent in Storage.")
-            } else {
-                KeepsyLogger.w("Non-critical deletion failure: $msg")
-            }
-        }
-        
+        // We update the pointers first to immediately refresh UI fallbacks
         updateProfile(null, "")
-    }
-
-    suspend fun changePassword(current: String, new: String) {
-        val user = auth.currentUser ?: throw Exception("No user authenticated")
-        val email = user.email ?: throw Exception("No email associated")
         
-        val credential = com.google.firebase.auth.EmailAuthProvider.getCredential(email, current)
-        user.reauthenticate(credential).await()
-        
-        user.updatePassword(new).await()
+        // Cleaning up the storage folder is best-effort and happens in background
+        try {
+            val folderRef = storage.reference.child("users/$uid/profile/")
+            folderRef.listAll().addOnSuccessListener { listResult ->
+                for (item in listResult.items) {
+                    item.delete()
+                }
+            }
+        } catch (e: Exception) {
+            KeepsyLogger.d("Storage cleanup skipped: ${e.message}")
+        }
     }
 
     suspend fun reloadUser(): Boolean {
@@ -319,5 +309,15 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         val bundle = Bundle()
         method?.let { bundle.putString(com.google.firebase.analytics.FirebaseAnalytics.Param.METHOD, it) }
         analytics.logEvent(name, bundle)
+    }
+
+    suspend fun changePassword(current: String, new: String) {
+        val user = auth.currentUser ?: throw Exception("No user authenticated")
+        val email = user.email ?: throw Exception("No email associated")
+        
+        val credential = com.google.firebase.auth.EmailAuthProvider.getCredential(email, current)
+        user.reauthenticate(credential).await()
+        
+        user.updatePassword(new).await()
     }
 }
