@@ -13,6 +13,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -20,6 +23,7 @@ import com.keepsy.app.navigation.SubScreen
 import com.keepsy.app.ui.components.*
 import com.keepsy.app.ui.theme.*
 import com.keepsy.app.viewmodel.KeepsyViewModel
+import kotlinx.coroutines.delay
 
 @Composable
 fun SearchScreen(
@@ -28,6 +32,15 @@ fun SearchScreen(
 ) {
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
+    
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(Unit) {
+        delay(300) // Wait for transition to finish
+        focusRequester.requestFocus()
+        keyboardController?.show()
+    }
 
     Column(
         modifier = Modifier
@@ -40,6 +53,7 @@ fun SearchScreen(
             placeholder = "Search items, spaces, or notes...",
             modifier = Modifier
                 .padding(bottom = 16.dp)
+                .focusRequester(focusRequester)
         )
 
         if (searchQuery == "") {
