@@ -41,7 +41,6 @@ import java.util.*
 
 @Composable
 fun SettingsScreen(viewModel: KeepsyViewModel, onNavigateToSub: (SubScreen) -> Unit) {
-    val darkModePreferred by viewModel.darkModePreference.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -94,41 +93,6 @@ fun SettingsScreen(viewModel: KeepsyViewModel, onNavigateToSub: (SubScreen) -> U
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item {
-            PremiumSettingsCard(title = "Appearance") {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = "System Theme",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ThemeOption(
-                            label = "System",
-                            selected = darkModePreferred == null,
-                            onClick = { viewModel.setDarkModePreference(null) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        ThemeOption(
-                            label = "Light",
-                            selected = darkModePreferred == false,
-                            onClick = { viewModel.setDarkModePreference(false) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        ThemeOption(
-                            label = "Dark",
-                            selected = darkModePreferred == true,
-                            onClick = { viewModel.setDarkModePreference(true) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
-        }
-
         item {
             PremiumSettingsCard(title = "Data Management") {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -240,28 +204,6 @@ fun PremiumSettingsCard(title: String, content: @Composable () -> Unit) {
                 content()
             }
         }
-    }
-}
-
-@Composable
-fun ThemeOption(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val backgroundColor by animateColorAsState(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-    val contentColor by animateColorAsState(if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.secondary)
-    
-    Box(
-        modifier = modifier
-            .height(44.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(backgroundColor)
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            color = contentColor
-        )
     }
 }
 

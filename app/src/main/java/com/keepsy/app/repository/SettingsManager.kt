@@ -41,9 +41,6 @@ class SettingsManager(private val context: Context) {
     private val _isOnboardingCompleted = MutableStateFlow(false)
     val isOnboardingCompleted: StateFlow<Boolean> = _isOnboardingCompleted
 
-    private val _darkModePreference = MutableStateFlow<Boolean?>(null)
-    val darkModePreference: StateFlow<Boolean?> = _darkModePreference
-
     private val _lastUserId = MutableStateFlow<String?>(null)
     val lastUserId: StateFlow<String?> = _lastUserId
 
@@ -54,7 +51,6 @@ class SettingsManager(private val context: Context) {
     private fun loadSettings() {
         try {
             _isOnboardingCompleted.value = prefs.getBoolean("onboarding_complete", false)
-            _darkModePreference.value = if (prefs.contains("dark_mode")) prefs.getBoolean("dark_mode", false) else null
             _lastUserId.value = prefs.getString("last_user_id", null)
         } catch (e: Exception) {
             KeepsyLogger.e("Failed to read settings", e)
@@ -79,27 +75,10 @@ class SettingsManager(private val context: Context) {
         }
     }
 
-    fun setDarkModePreference(dark: Boolean?) {
-        try {
-            val editor = prefs.edit()
-            if (dark == null) {
-                editor.remove("dark_mode")
-                _darkModePreference.value = null
-            } else {
-                editor.putBoolean("dark_mode", dark)
-                _darkModePreference.value = dark
-            }
-            editor.apply()
-        } catch (e: Exception) {
-            KeepsyLogger.e("Failed to set dark mode preference", e)
-        }
-    }
-
     fun resetSettings() {
         try {
             prefs.edit().clear().apply()
             _isOnboardingCompleted.value = false
-            _darkModePreference.value = null
         } catch (e: Exception) {
             KeepsyLogger.e("Failed to reset settings", e)
         }

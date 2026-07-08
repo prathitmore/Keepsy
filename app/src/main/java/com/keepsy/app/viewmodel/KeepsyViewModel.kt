@@ -61,7 +61,6 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
 
     // App Preferences
     val isOnboardingCompleted = settingsManager.isOnboardingCompleted
-    val darkModePreference = settingsManager.darkModePreference
 
     private val _isStatusChecked = MutableStateFlow(false)
     val isStatusChecked: StateFlow<Boolean> = _isStatusChecked.asStateFlow()
@@ -383,12 +382,8 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
 
         _isRestoringData.value = true
         try {
-            // 1. Force a clean initial sync with a safety timeout
-            withContext(Dispatchers.IO) {
-                kotlinx.coroutines.withTimeoutOrNull(15000) {
-                    syncRepository.syncOnLogin()
-                }
-            }
+            // 1. Force a clean initial sync to see if there's remote data
+            syncRepository.syncOnLogin()
             
             // 2. Check local database for ANY existing content
             val spaceCount = db.appDao().getSpaceCount()
@@ -399,13 +394,8 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
                 KeepsyLogger.i("Content found ($spaceCount spaces, $itemCount items, logs: $hasActivity), marking onboarding as completed")
                 settingsManager.setOnboardingCompleted(true)
             } else {
-                // 3. Fallback: Check cloud profile and raw collections explicitly (with timeout)
-                val existsOnCloud = withContext(Dispatchers.IO) {
-                    kotlinx.coroutines.withTimeoutOrNull(10000) {
-                        syncRepository.isUserAlreadyExistsOnCloud()
-                    } ?: false
-                }
-
+                // 3. Fallback: Check cloud profile and raw collections explicitly
+                val existsOnCloud = syncRepository.isUserAlreadyExistsOnCloud()
                 if (existsOnCloud) {
                     KeepsyLogger.i("No local data but cloud data exists, marking onboarding as completed")
                     settingsManager.setOnboardingCompleted(true)
@@ -470,10 +460,6 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
                 KeepsyLogger.e("Onboarding completion failed", e)
             }
         }
-    }
-
-    fun setDarkModePreference(dark: Boolean?) {
-        settingsManager.setDarkModePreference(dark)
     }
 
     fun resetApp() {

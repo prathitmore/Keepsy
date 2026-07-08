@@ -1,10 +1,8 @@
 package com.keepsy.app.ui.theme
 
 import android.app.Activity
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
@@ -25,25 +23,11 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = SurfaceTertiary
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = PrimaryPurple,
-    background = BackgroundLight,
-    surface = SurfaceSecondaryLight,
-    onPrimary = Color.White,
-    onBackground = TextPrimaryLight,
-    onSurface = TextPrimaryLight,
-    outline = BorderColorLight,
-    error = ErrorRed,
-    secondary = TextSecondaryLight,
-    surfaceVariant = SurfaceTertiaryLight
-)
-
 @Composable
 fun KeepsyTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val colorScheme = DarkColorScheme
     val view = LocalView.current
     
     if (!view.isInEditMode) {
@@ -52,10 +36,10 @@ fun KeepsyTheme(
             window.statusBarColor = colorScheme.background.toArgb()
             window.navigationBarColor = colorScheme.background.toArgb()
             
-            // Set appearance of status bars and navigation bars
+            // Keepsy is a Dark-only premium brand
             val insetsController = WindowCompat.getInsetsController(window, view)
-            insetsController.isAppearanceLightStatusBars = !darkTheme
-            insetsController.isAppearanceLightNavigationBars = !darkTheme
+            insetsController.isAppearanceLightStatusBars = false
+            insetsController.isAppearanceLightNavigationBars = false
         }
     }
 
