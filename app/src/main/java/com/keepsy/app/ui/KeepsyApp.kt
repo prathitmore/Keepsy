@@ -72,14 +72,15 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
                 if (!user.isEmailVerified) {
                     appScreen = Screen.VerifyEmail
                 } else {
-                    // Start checking cloud status if we haven't yet and not already restoring
+                    // 1. Check cloud if we haven't confirmed status yet
                     if (!onboardingDone && !hasAttemptedCloudSync && !isRestoring) {
                         hasAttemptedCloudSync = true
+                        KeepsyLogger.i("KeepsyApp: Verifying returning user status...")
                         viewModel.checkOnboardingStatus()
                         return@LaunchedEffect
                     }
                     
-                    // While syncing, show success screen with loader
+                    // 2. While verifying/restoring, stay on success screen
                     if (isRestoring) {
                         if (appScreen !is Screen.AuthSuccess) {
                             appScreen = Screen.AuthSuccess(user.name ?: user.email ?: "Friend")
@@ -87,12 +88,17 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
                         return@LaunchedEffect
                     }
 
-                    // Once sync is done (or was already done)
+                    // 3. Final Decision
                     if (onboardingDone) {
-                        appScreen = Screen.Dashboard
+                        if (appScreen != Screen.Dashboard) {
+                            KeepsyLogger.i("KeepsyApp: User ready, showing Dashboard")
+                            appScreen = Screen.Dashboard
+                        }
                     } else if (hasAttemptedCloudSync) {
-                        // Truly a new user
-                        appScreen = Screen.Onboarding
+                        if (appScreen != Screen.Onboarding) {
+                            KeepsyLogger.i("KeepsyApp: New user confirmed, showing Onboarding")
+                            appScreen = Screen.Onboarding
+                        }
                     }
                 }
             }

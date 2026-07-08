@@ -359,26 +359,31 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
 
         _isRestoringData.value = true
         try {
-            // 1. Always perform initial sync to see if there's remote data
+            // 1. Force a clean initial sync to see if there's remote data
             syncRepository.syncOnLogin()
             
-            // 2. Check if the user has a Root Space in the newly restored Room DB
-            val rootSpaces = db.appDao().getLiveSpaces().first()
-            if (rootSpaces.isNotEmpty()) {
+            // 2. Check local database for ANY existing content
+            val spaceCount = db.appDao().getSpaceCount()
+            val itemCount = db.appDao().getDirtyItems().size + db.appDao().getLiveActiveItems().first().size
+            
+            if (spaceCount > 0 || itemCount > 0) {
+                KeepsyLogger.i("Content found ($spaceCount spaces, $itemCount items), marking onboarding as completed")
                 settingsManager.setOnboardingCompleted(true)
             } else {
-                // 3. If no local data, check Firestore profile explicitly
-                val profile = firestoreService.getProfile()
-                val cloudOnboardingDone = profile?.get("onboardingCompleted") as? Boolean ?: false
-                
-                if (cloudOnboardingDone) {
+                // 3. Fallback: Check cloud profile and raw collections explicitly
+                val existsOnCloud = syncRepository.isUserAlreadyExistsOnCloud()
+                if (existsOnCloud) {
+                    KeepsyLogger.i("No local data but cloud data exists, marking onboarding as completed")
                     settingsManager.setOnboardingCompleted(true)
+                    // Sync again to be absolutely sure we have the structure
+                    syncRepository.syncOnLogin()
                 } else {
-                    // This is a truly fresh account
+                    KeepsyLogger.i("Truly fresh user detected")
                     settingsManager.setOnboardingCompleted(false)
                 }
             }
         } catch (e: Exception) {
+            KeepsyLogger.e("Failed to check onboarding status", e)
             handleError(e)
         } finally {
             _isRestoringData.value = false
@@ -393,6 +398,40 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
                 data["onboardingCompleted"] = true
                 firestoreService.updateProfile(data)
             } catch (e: Exception) { /* Non-fatal */ }
+        }
+    }
+
+    fun completeOnboarding(spaceName: String, itemName: String?) {
+        viewModelScope.launch {
+            try {
+                // 1. Mark onboarding as done locally and on cloud
+                settingsManager.setOnboardingCompleted(true)
+                val data = HashMap<String, Any>()
+                data["onboardingCompleted"] = true
+                firestoreService.updateProfile(data)
+
+                // 2. Create the first space
+                saveSpace(0L, spaceName.trim(), "My primary location.", null, "home", null, true) {
+                    // Success callback
+                }
+                
+                // 3. Create the first item if provided
+                if (itemName != null && itemName.trim().isNotEmpty()) {
+                    // Wait for space to be available
+                    val spacesList = spaces.first()
+                    val spaceId = spacesList.find { it.name == spaceName.trim() }?.spaceId 
+                        ?: spacesList.firstOrNull()?.spaceId ?: 1L
+                        
+                    saveItem(0L, itemName.trim(), "Saved during onboarding.", spaceId, 1L, "Welcome!", null, listOf("important"), true) {
+                        // Success callback
+                    }
+                }
+                
+                // 4. Initial cloud sync
+                manualSync()
+            } catch (e: Exception) {
+                KeepsyLogger.e("Onboarding completion failed", e)
+            }
         }
     }
 

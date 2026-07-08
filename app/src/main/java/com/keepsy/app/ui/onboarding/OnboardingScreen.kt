@@ -34,7 +34,6 @@ import kotlinx.coroutines.launch
 fun OnboardingScreenView(viewModel: KeepsyViewModel, onFinished: () -> Unit) {
     var onboardingStep by remember { mutableIntStateOf(1) }
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
     var firstSpaceName by remember { mutableStateOf("Home") }
     var firstItemName by remember { mutableStateOf("") }
@@ -203,22 +202,9 @@ fun OnboardingScreenView(viewModel: KeepsyViewModel, onFinished: () -> Unit) {
                                 Toast.makeText(context, "Please name your first space", Toast.LENGTH_SHORT).show()
                                 return@PrimaryGradientButton
                             }
-                            scope.launch {
-                                viewModel.saveSpace(0L, firstSpaceName.trim(), "My primary location.", null, "home", null, true) {
-                                    scope.launch {
-                                        if (firstItemName.trim().isNotEmpty()) {
-                                            val spaces = viewModel.spaces.first()
-                                            val spaceId = spaces.find { it.name == firstSpaceName.trim() }?.spaceId ?: spaces.firstOrNull()?.spaceId ?: 1L
-                                            
-                                            viewModel.saveItem(0L, firstItemName.trim(), "Saved during onboarding.", spaceId, 1L, "Welcome!", null, listOf("important"), true) {
-                                                onFinished()
-                                            }
-                                        } else {
-                                            onFinished()
-                                        }
-                                    }
-                                }
-                            }
+                            
+                            viewModel.completeOnboarding(firstSpaceName, firstItemName)
+                            // Navigation will happen automatically via KeepsyApp observing onboardingDone
                         }
                     },
                     modifier = Modifier.width(if (onboardingStep == totalSteps) 220.dp else 120.dp)

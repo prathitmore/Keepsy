@@ -33,6 +33,9 @@ interface AppDao {
     suspend fun getDirtySpaces(): List<Space>
 
 
+    @Query("SELECT COUNT(*) FROM spaces WHERE isDeleted = 0")
+    suspend fun getSpaceCount(): Int
+
     // --- ITEMS ---
     @Query("SELECT * FROM items WHERE isDeleted = 0 ORDER BY updatedAt DESC")
     fun getLiveActiveItems(): Flow<List<Item>>
