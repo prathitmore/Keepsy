@@ -4,6 +4,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -12,14 +13,25 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 
 fun Modifier.shimmerLoadingAnimation(): Modifier = composed {
-    val shimmerColors = listOf(
-        Color.White.copy(alpha = 0.05f),
-        Color.White.copy(alpha = 0.15f),
-        Color.White.copy(alpha = 0.05f),
-    )
+    val isLight = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    
+    val shimmerColors = if (isLight) {
+        listOf(
+            Color.Black.copy(alpha = 0.05f),
+            Color.Black.copy(alpha = 0.12f),
+            Color.Black.copy(alpha = 0.05f),
+        )
+    } else {
+        listOf(
+            Color.White.copy(alpha = 0.05f),
+            Color.White.copy(alpha = 0.15f),
+            Color.White.copy(alpha = 0.05f),
+        )
+    }
 
     val transition = rememberInfiniteTransition(label = "shimmer")
     val translateAnim = transition.animateFloat(

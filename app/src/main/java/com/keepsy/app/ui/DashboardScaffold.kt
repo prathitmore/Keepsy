@@ -62,7 +62,7 @@ fun DashboardScaffold(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // Shared Background Effects
         KeepsyBackgroundEffects()
@@ -213,7 +213,7 @@ fun PremiumTopBar(currentTab: TabScreen) {
             modifier = Modifier.size(42.dp),
             shape = RoundedCornerShape(12.dp),
             color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
@@ -255,7 +255,7 @@ fun FloatingBottomNavigation(
                 .fillMaxWidth(),
             shape = RoundedCornerShape(32.dp),
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
             shadowElevation = 12.dp
         ) {
             Row(

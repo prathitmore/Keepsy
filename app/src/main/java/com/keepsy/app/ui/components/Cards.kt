@@ -102,7 +102,7 @@ fun SpaceHorizontalCard(space: Space, onClick: () -> Unit) {
                 Text(
                     text = if (space.parentSpaceId != null) "Sub-space" else "Primary location",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.85f)
                 )
             }
         }

@@ -168,6 +168,7 @@ fun SplashScreenView(onAnimationFinished: () -> Unit = {}) {
 @Composable
 fun KeepsyBackgroundEffects() {
     val infiniteTransition = rememberInfiniteTransition(label = "bg_effects")
+    val isLight = MaterialTheme.colorScheme.background.luminance() > 0.5f
     
     // Floating particles
     val particleOffset by infiniteTransition.animateFloat(
@@ -193,7 +194,7 @@ fun KeepsyBackgroundEffects() {
         
         drawPath(
             path = path,
-            color = PrimaryAccent.copy(alpha = 0.08f),
+            color = (if (isLight) Color.LightGray else PrimaryAccent).copy(alpha = if (isLight) 0.3f else 0.08f),
             style = Stroke(width = 2f)
         )
         
@@ -205,7 +206,11 @@ fun KeepsyBackgroundEffects() {
             val moveY = (particleOffset * 60f) * (if (it % 2 == 0) 1f else -1f)
             
             drawCircle(
-                color = if (it % 3 == 0) PrimaryAccent.copy(alpha = 0.15f) else PrimaryPurple.copy(alpha = 0.1f),
+                color = if (it % 3 == 0) {
+                    (if (isLight) Color.LightGray else PrimaryAccent).copy(alpha = if (isLight) 0.5f else 0.1f)
+                } else {
+                    (if (isLight) Color.Gray else PrimaryPurple).copy(alpha = if (isLight) 0.4f else 0.08f)
+                },
                 radius = 2.dp.toPx(),
                 center = Offset(startX, startY + moveY)
             )
@@ -286,9 +291,9 @@ fun TrustFeatureCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.5f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
         shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, BorderColor.copy(alpha = 0.5f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -298,13 +303,13 @@ fun TrustFeatureCard(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(PrimaryPurple.copy(alpha = 0.1f)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = PrimaryPurple,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -313,13 +318,13 @@ fun TrustFeatureCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.secondary
                 )
             }
         }
@@ -412,6 +417,8 @@ fun KeepsySearchBar(
     placeholder: String,
     modifier: Modifier = Modifier
 ) {
+    val isLight = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
@@ -419,7 +426,7 @@ fun KeepsySearchBar(
             Icon(
                 imageVector = Icons.Default.Search, 
                 contentDescription = null, 
-                tint = PrimaryAccent,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(22.dp)
             ) 
         },
@@ -433,7 +440,7 @@ fun KeepsySearchBar(
                     Icon(
                         imageVector = Icons.Default.Close, 
                         contentDescription = "Clear", 
-                        tint = TextSecondary,
+                        tint = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -443,17 +450,17 @@ fun KeepsySearchBar(
             Text(
                 text = placeholder,
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f)
             ) 
         },
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = if (isLight) 0.8f else 0.4f),
             focusedTextColor = MaterialTheme.colorScheme.onSurface,
             unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
             cursorColor = MaterialTheme.colorScheme.primary,
-            focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
+            focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
         ),
         shape = RoundedCornerShape(20.dp),
         singleLine = true,
@@ -505,6 +512,8 @@ fun EmptyState(
     modifier: Modifier = Modifier,
     action: @Composable (() -> Unit)? = null
 ) {
+    val isLight = MaterialTheme.colorScheme.background.luminance() > 0.5f
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -517,14 +526,14 @@ fun EmptyState(
                 .size(120.dp)
                 .clip(RoundedCornerShape(32.dp))
                 .background(MaterialTheme.colorScheme.surface)
-                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)), RoundedCornerShape(32.dp)),
+                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = if (isLight) 0.8f else 0.5f)), RoundedCornerShape(32.dp)),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
                     .size(60.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = if (isLight) 0.15f else 0.05f)),
                 contentAlignment = Alignment.Center
             ) {
                 icon()
