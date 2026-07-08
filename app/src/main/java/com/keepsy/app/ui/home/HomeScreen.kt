@@ -36,6 +36,7 @@ fun HomeScreen(
     val stats by viewModel.appStatistics.collectAsStateWithLifecycle()
     val recentlyAdded by viewModel.recentItems.collectAsStateWithLifecycle()
     val favorites by viewModel.favoriteItems.collectAsStateWithLifecycle()
+    val isRestoring by viewModel.isRestoringData.collectAsStateWithLifecycle()
 
     LazyColumn(
         modifier = Modifier
@@ -74,7 +75,7 @@ fun HomeScreen(
             }
         }
 
-        // 2. Statistics Overview
+        // 2. Statistics Overview (With Skeleton)
         item {
             Row(
                 modifier = Modifier
@@ -82,23 +83,28 @@ fun HomeScreen(
                     .padding(horizontal = 24.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                StatCard(
-                    title = "Total Items",
-                    value = stats.totalItems.toString(),
-                    icon = Icons.Default.Inventory2,
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    title = "Spaces",
-                    value = stats.totalSpaces.toString(),
-                    icon = Icons.Default.Layers,
-                    modifier = Modifier.weight(1f)
-                )
+                if (isRestoring) {
+                    Box(modifier = Modifier.weight(1f).height(110.dp).clip(RoundedCornerShape(24.dp)).shimmerLoadingAnimation())
+                    Box(modifier = Modifier.weight(1f).height(110.dp).clip(RoundedCornerShape(24.dp)).shimmerLoadingAnimation())
+                } else {
+                    StatCard(
+                        title = "Total Items",
+                        value = stats.totalItems.toString(),
+                        icon = Icons.Default.Inventory2,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatCard(
+                        title = "Spaces",
+                        value = stats.totalSpaces.toString(),
+                        icon = Icons.Default.Layers,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
 
         // 3. Favorites Section
-        if (favorites.isNotEmpty()) {
+        if (favorites.isNotEmpty() || isRestoring) {
             item {
                 SectionHeader(
                     title = "Pinned Favorites",
@@ -118,18 +124,23 @@ fun HomeScreen(
                         .padding(bottom = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    favorites.take(3).forEach { itemDetails ->
-                        PremiumItemCard(
-                            itemDetails = itemDetails,
-                            onClick = { onNavigateToSub(SubScreen.ItemDetails(itemDetails.item.itemId)) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    // Fill remaining slots for alignment
-                    val remaining = 3 - favorites.take(3).size
-                    if (remaining > 0) {
-                        repeat(remaining) {
-                            Spacer(modifier = Modifier.weight(1f))
+                    if (isRestoring) {
+                        repeat(3) {
+                            Box(modifier = Modifier.weight(1f).height(160.dp).clip(RoundedCornerShape(24.dp)).shimmerLoadingAnimation())
+                        }
+                    } else {
+                        favorites.take(3).forEach { itemDetails ->
+                            PremiumItemCard(
+                                itemDetails = itemDetails,
+                                onClick = { onNavigateToSub(SubScreen.ItemDetails(itemDetails.item.itemId)) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        val remaining = 3 - favorites.take(3).size
+                        if (remaining > 0) {
+                            repeat(remaining) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 }
@@ -144,7 +155,13 @@ fun HomeScreen(
             )
         }
 
-        if (recentlyAdded.isEmpty()) {
+        if (isRestoring) {
+            items(5) {
+                Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)) {
+                    ItemCardShimmer()
+                }
+            }
+        } else if (recentlyAdded.isEmpty()) {
             item {
                 EmptyState(
                     icon = {
@@ -190,7 +207,7 @@ fun StatCard(
         modifier = modifier.height(110.dp),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceSecondary),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
     ) {
         Column(
             modifier = Modifier

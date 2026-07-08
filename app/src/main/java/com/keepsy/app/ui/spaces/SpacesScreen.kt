@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -30,6 +31,7 @@ fun SpacesScreen(
     onNavigateToSub: (SubScreen) -> Unit
 ) {
     val spacesList by viewModel.spaces.collectAsStateWithLifecycle(emptyList())
+    val isRestoring by viewModel.isRestoringData.collectAsStateWithLifecycle()
     val expandedSpaceIds = remember { mutableStateListOf<Long>() }
 
     Column(
@@ -37,7 +39,17 @@ fun SpacesScreen(
             .fillMaxSize()
             .padding(horizontal = 24.dp)
     ) {
-        if (spacesList.isEmpty()) {
+        if (isRestoring) {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(6) {
+                    Box(modifier = Modifier.fillMaxWidth().height(80.dp).clip(RoundedCornerShape(16.dp)).shimmerLoadingAnimation())
+                }
+            }
+        } else if (spacesList.isEmpty()) {
             EmptyState(
                 icon = {
                     Icon(

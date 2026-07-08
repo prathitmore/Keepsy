@@ -42,10 +42,17 @@ fun ItemDetailsScreen(
     val itemDetails by viewModel.selectedItem.collectAsStateWithLifecycle()
     val activityTrail by viewModel.getActivityTrailForItem(itemId).collectAsStateWithLifecycle(emptyList())
 
+    var spacePath by remember { mutableStateOf("") }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(itemId) {
         viewModel.selectItem(itemId)
+    }
+
+    LaunchedEffect(itemDetails) {
+        itemDetails?.space?.let {
+            spacePath = viewModel.getFullSpacePath(it.spaceId)
+        }
     }
 
     Scaffold(
@@ -200,15 +207,16 @@ fun ItemDetailsScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = details.space?.name ?: "Unknown Location",
+                                    text = if (spacePath != "") spacePath else (details.space?.name ?: "Unknown Location"),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimary
                                 )
                                 Text(
-                                    text = "Tap to view map",
+                                    text = "Physical Map Skeleton",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = TextSecondary
+                                    color = PrimaryAccent,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                             Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null, tint = TextSecondary)

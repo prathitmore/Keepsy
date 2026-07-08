@@ -636,6 +636,23 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
         return repository.getActivityTrailForItem(itemId)
     }
 
+    suspend fun getFullSpacePath(spaceId: Long): String {
+        val path = mutableListOf<String>()
+        var currentId: Long? = spaceId
+        
+        while (currentId != null && currentId != 0L) {
+            val space = repository.getSpaceById(currentId)
+            if (space != null) {
+                path.add(0, space.name)
+                currentId = space.parentSpaceId
+            } else {
+                currentId = null
+            }
+        }
+        
+        return if (path.isEmpty()) "Unknown Location" else path.joinToString(" • ")
+    }
+
     data class Stats(
         val totalItems: Int,
         val totalSpaces: Int,

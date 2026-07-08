@@ -56,13 +56,15 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
     }
 
     val onboardingDone by viewModel.isOnboardingCompleted.collectAsStateWithLifecycle()
+    val isRestoring by viewModel.isRestoringData.collectAsStateWithLifecycle()
+    
+    var hasAttemptedCloudSync by remember { mutableStateOf(false) }
 
     // 1. Monitor state changes to decide on screen transitions
-    LaunchedEffect(authState, isSplashAnimationComplete, onboardingDone) {
+    LaunchedEffect(authState, isSplashAnimationComplete, onboardingDone, isRestoring) {
         if (!isSplashAnimationComplete) return@LaunchedEffect
         
-        delay(300)
-        KeepsyLogger.d("KeepsyApp: Navigating - Auth: $authState, Onboarding: $onboardingDone")
+        KeepsyLogger.d("KeepsyApp: Navigating - Auth: $authState, Onboarding: $onboardingDone, Restoring: $isRestoring")
         
         when (authState) {
             is AuthState.Authenticated -> {
@@ -70,26 +72,33 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
                 if (!user.isEmailVerified) {
                     appScreen = Screen.VerifyEmail
                 } else {
-                    // 1. Check cloud for onboarding status if not already known
-                    if (!onboardingDone) {
+                    // Start checking cloud status if we haven't yet and not already restoring
+                    if (!onboardingDone && !hasAttemptedCloudSync && !isRestoring) {
+                        hasAttemptedCloudSync = true
                         viewModel.checkOnboardingStatus()
-                    }
-
-                    // 2. We stay on Success for a moment before branching
-                    if (appScreen !is Screen.AuthSuccess && appScreen != Screen.Dashboard && appScreen != Screen.Onboarding) {
-                        appScreen = Screen.AuthSuccess(user.name ?: user.email ?: "Friend")
-                        delay(1800)
+                        return@LaunchedEffect
                     }
                     
+                    // While syncing, show success screen with loader
+                    if (isRestoring) {
+                        if (appScreen !is Screen.AuthSuccess) {
+                            appScreen = Screen.AuthSuccess(user.name ?: user.email ?: "Friend")
+                        }
+                        return@LaunchedEffect
+                    }
+
+                    // Once sync is done (or was already done)
                     if (onboardingDone) {
                         appScreen = Screen.Dashboard
-                    } else {
+                    } else if (hasAttemptedCloudSync) {
+                        // Truly a new user
                         appScreen = Screen.Onboarding
                     }
                 }
             }
             is AuthState.Unauthenticated, is AuthState.Error -> {
                 appScreen = Screen.Auth
+                hasAttemptedCloudSync = false
             }
             else -> {}
         }
