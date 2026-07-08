@@ -54,7 +54,10 @@ fun HomeScreen(
                     .clip(RoundedCornerShape(20.dp))
                     .background(CardBackground.copy(alpha = 0.4f))
                     .border(BorderStroke(1.dp, BorderColor.copy(alpha = 0.4f)), RoundedCornerShape(20.dp))
-                    .clickable { onTabSelected(TabScreen.Search) }
+                    .clickable { 
+                        viewModel.updateSearchQuery("") // Clear old search
+                        onTabSelected(TabScreen.Search) 
+                    }
                     .padding(horizontal = 16.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
