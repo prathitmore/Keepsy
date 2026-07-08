@@ -45,8 +45,8 @@ fun SpacesScreen(
                 contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(6) {
-                    Box(modifier = Modifier.fillMaxWidth().height(80.dp).clip(RoundedCornerShape(16.dp)).shimmerLoadingAnimation())
+                items(8) {
+                    SpaceCardShimmer()
                 }
             }
         } else if (spacesList.isEmpty()) {

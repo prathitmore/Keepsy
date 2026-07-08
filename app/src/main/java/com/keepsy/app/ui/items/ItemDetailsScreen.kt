@@ -1,7 +1,9 @@
 package com.keepsy.app.ui.items
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,6 +26,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.keepsy.app.R
+import com.keepsy.app.model.ItemWithDetails
+import com.keepsy.app.model.Space
 import com.keepsy.app.navigation.SubScreen
 import com.keepsy.app.ui.components.*
 import com.keepsy.app.ui.theme.*
@@ -42,7 +46,7 @@ fun ItemDetailsScreen(
     val itemDetails by viewModel.selectedItem.collectAsStateWithLifecycle()
     val activityTrail by viewModel.getActivityTrailForItem(itemId).collectAsStateWithLifecycle(emptyList())
 
-    var spacePath by remember { mutableStateOf("") }
+    var spaceTrail by remember { mutableStateOf<List<Space>>(emptyList()) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(itemId) {
@@ -51,7 +55,7 @@ fun ItemDetailsScreen(
 
     LaunchedEffect(itemDetails) {
         itemDetails?.space?.let {
-            spacePath = viewModel.getFullSpacePath(it.spaceId)
+            spaceTrail = viewModel.getFullSpaceTrail(it.spaceId)
         }
     }
 
@@ -175,51 +179,78 @@ fun ItemDetailsScreen(
                     }
                 }
 
-                // Location Card
+                // Location Section
                 item {
-                    SectionHeader(title = "Stored In")
+                    SectionHeader(title = "Physical Location Map")
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(containerColor = SurfaceSecondary),
-                        onClick = {
-                            details.space?.let { onNavigateToSub(SubScreen.SpaceDetails(it.spaceId)) }
-                        }
+                        shape = RoundedCornerShape(28.dp),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceSecondary.copy(alpha = 0.6f)),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
                     ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(PrimaryAccent.copy(alpha = 0.1f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = getSpaceIconVector(details.space?.icon ?: "home"),
-                                    contentDescription = null,
-                                    tint = PrimaryAccent,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column(modifier = Modifier.weight(1f)) {
+                        Column(modifier = Modifier.padding(20.dp)) {
+                            if (spaceTrail.isEmpty()) {
                                 Text(
-                                    text = if (spacePath != "") spacePath else (details.space?.name ?: "Unknown Location"),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextPrimary
+                                    text = "Unknown Location",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextSecondary
                                 )
-                                Text(
-                                    text = "Physical Map Skeleton",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = PrimaryAccent,
-                                    fontWeight = FontWeight.Bold
-                                )
+                            } else {
+                                spaceTrail.forEachIndexed { index, space ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.clickable { 
+                                            onNavigateToSub(SubScreen.SpaceDetails(space.spaceId))
+                                        }
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(PrimaryAccent.copy(alpha = 0.1f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = getSpaceIconVector(space.icon),
+                                                contentDescription = null,
+                                                tint = PrimaryAccent,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        
+                                        Spacer(modifier = Modifier.width(16.dp))
+                                        
+                                        Column {
+                                            Text(
+                                                text = space.name,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = TextPrimary
+                                            )
+                                            Text(
+                                                text = if (index == 0) "Primary Root" else "Stored inside ${spaceTrail[index-1].name}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
+                                    
+                                    if (index < spaceTrail.size - 1) {
+                                        // Visual connector
+                                        Box(
+                                            modifier = Modifier
+                                                .padding(start = 20.dp)
+                                                .width(2.dp)
+                                                .height(20.dp)
+                                                .background(
+                                                    Brush.verticalGradient(
+                                                        colors = listOf(PrimaryAccent.copy(alpha = 0.5f), Color.Transparent)
+                                                    )
+                                                )
+                                        )
+                                    }
+                                }
                             }
-                            Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null, tint = TextSecondary)
                         }
                     }
                 }
