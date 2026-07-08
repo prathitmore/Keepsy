@@ -41,7 +41,7 @@ fun HomeScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background),
+            .background(MaterialTheme.colorScheme.background),
         contentPadding = PaddingValues(bottom = 100.dp)
     ) {
         // 1. Search Shortcut
@@ -52,8 +52,8 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .height(56.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(CardBackground.copy(alpha = 0.4f))
-                    .border(BorderStroke(1.dp, BorderColor.copy(alpha = 0.4f)), RoundedCornerShape(20.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.4f))
+                    .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)), RoundedCornerShape(20.dp))
                     .clickable { 
                         viewModel.updateSearchQuery("") // Clear old search
                         onTabSelected(TabScreen.Search) 
@@ -65,14 +65,14 @@ fun HomeScreen(
                     Icon(
                         imageVector = Icons.Default.Search, 
                         contentDescription = null, 
-                        tint = PrimaryAccent,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(22.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "Search items, spaces, or notes...",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = TextSecondary.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
                 }
             }
@@ -114,7 +114,7 @@ fun HomeScreen(
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                     action = {
                         TextButton(onClick = { onTabSelected(TabScreen.Search) }) {
-                            Text("See All", color = PrimaryAccent, fontWeight = FontWeight.Bold)
+                            Text("See All", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                         }
                     }
                 )
@@ -209,7 +209,7 @@ fun StatCard(
     Card(
         modifier = modifier.height(110.dp),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceSecondary),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
     ) {
         Column(
@@ -221,20 +221,20 @@ fun StatCard(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = PrimaryAccent,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
             Column {
                 Text(
                     text = value,
                     style = MaterialTheme.typography.headlineSmall,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = title,
                     style = MaterialTheme.typography.labelMedium,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.secondary
                 )
             }
         }

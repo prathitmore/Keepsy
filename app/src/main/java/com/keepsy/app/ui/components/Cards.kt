@@ -51,9 +51,9 @@ fun SpaceHorizontalCard(space: Space, onClick: () -> Unit) {
 
     Card(
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = SurfaceSecondary),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
         interactionSource = interactionSource,
         modifier = Modifier
             .width(180.dp)
@@ -63,7 +63,7 @@ fun SpaceHorizontalCard(space: Space, onClick: () -> Unit) {
                 elevation = 8.dp, 
                 shape = RoundedCornerShape(24.dp), 
                 ambientColor = Color.Black, 
-                spotColor = PrimaryPurple.copy(alpha = 0.2f)
+                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
             )
     ) {
         Column(
@@ -78,7 +78,7 @@ fun SpaceHorizontalCard(space: Space, onClick: () -> Unit) {
                     .clip(RoundedCornerShape(14.dp))
                     .background(
                         Brush.linearGradient(
-                            colors = listOf(PrimaryPurple.copy(alpha = 0.15f), PrimaryAccent.copy(alpha = 0.05f))
+                            colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), MaterialTheme.colorScheme.primary.copy(alpha = 0.05f))
                         )
                     ),
                 contentAlignment = Alignment.Center
@@ -86,7 +86,7 @@ fun SpaceHorizontalCard(space: Space, onClick: () -> Unit) {
                 Icon(
                     imageVector = getSpaceIconVector(space.icon),
                     contentDescription = null,
-                    tint = PrimaryAccent,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -97,12 +97,12 @@ fun SpaceHorizontalCard(space: Space, onClick: () -> Unit) {
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = if (space.parentSpaceId != null) "Sub-space" else "Primary location",
                     style = MaterialTheme.typography.labelSmall,
-                    color = TextSecondary.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f)
                 )
             }
         }
@@ -117,9 +117,9 @@ fun ItemRowCard(itemDetails: ItemWithDetails, onClick: () -> Unit) {
 
     Card(
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = SurfaceSecondary.copy(alpha = 0.8f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)),
         shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.03f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.03f)),
         interactionSource = interactionSource,
         modifier = Modifier
             .fillMaxWidth()
@@ -141,7 +141,7 @@ fun ItemRowCard(itemDetails: ItemWithDetails, onClick: () -> Unit) {
                     modifier = Modifier
                         .size(64.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
                 )
             } else {
                 Box(
@@ -170,7 +170,7 @@ fun ItemRowCard(itemDetails: ItemWithDetails, onClick: () -> Unit) {
                     text = itemDetails.item.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -179,25 +179,25 @@ fun ItemRowCard(itemDetails: ItemWithDetails, onClick: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Surface(
-                        color = PrimaryAccent.copy(alpha = 0.1f),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
                             text = itemDetails.space?.name ?: "No location",
                             style = MaterialTheme.typography.labelSmall,
-                            color = PrimaryAccent,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                         )
                     }
                     Text(
                         text = "in",
                         style = MaterialTheme.typography.labelSmall,
-                        color = TextSecondary.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
                     )
                     Text(
                         text = itemDetails.category?.name ?: "Other",
                         style = MaterialTheme.typography.labelSmall,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.secondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -208,7 +208,7 @@ fun ItemRowCard(itemDetails: ItemWithDetails, onClick: () -> Unit) {
                 Icon(
                     imageVector = Icons.Default.AutoAwesome,
                     contentDescription = "Starred",
-                    tint = PrimaryAccent,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -237,9 +237,9 @@ fun SpaceTreeNode(
     ) {
         Card(
             onClick = { onNodeDetails(space.spaceId) },
-            colors = CardDefaults.cardColors(containerColor = SurfaceSecondary.copy(alpha = 0.6f)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)),
             shape = RoundedCornerShape(16.dp),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.02f)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.02f)),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 4.dp)
@@ -259,7 +259,7 @@ fun SpaceTreeNode(
                         Icon(
                             imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = if (isExpanded) "Collapse" else "Expand",
-                            tint = TextSecondary,
+                            tint = MaterialTheme.colorScheme.secondary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -271,13 +271,13 @@ fun SpaceTreeNode(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(PrimaryPurple.copy(alpha = 0.1f)),
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = getSpaceIconVector(space.icon),
                         contentDescription = null,
-                        tint = if (space.isFavorite) PrimaryAccent else PrimaryPurple,
+                        tint = if (space.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -289,7 +289,7 @@ fun SpaceTreeNode(
                         text = space.name,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -297,7 +297,7 @@ fun SpaceTreeNode(
                         Text(
                             text = space.description,
                             style = MaterialTheme.typography.labelSmall,
-                            color = TextSecondary.copy(alpha = 0.6f),
+                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -306,7 +306,7 @@ fun SpaceTreeNode(
                 
                 if (childSpaces.isNotEmpty()) {
                     Surface(
-                        color = SurfaceTertiary,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = CircleShape,
                         modifier = Modifier.size(24.dp)
                     ) {
@@ -314,7 +314,7 @@ fun SpaceTreeNode(
                             Text(
                                 text = "${childSpaces.size}",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = TextSecondary,
+                                color = MaterialTheme.colorScheme.secondary,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -360,8 +360,8 @@ fun PremiumItemCard(
             .height(160.dp)
             .graphicsLayer(scaleX = scale, scaleY = scale),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceSecondary),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (itemDetails.item.photoPath != null && File(itemDetails.item.photoPath).exists()) {
@@ -387,7 +387,7 @@ fun PremiumItemCard(
                         .fillMaxSize()
                         .background(
                             Brush.linearGradient(
-                                colors = listOf(PrimaryPurple.copy(alpha = 0.1f), CardBackground)
+                                colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), MaterialTheme.colorScheme.surface)
                             )
                         ),
                     contentAlignment = Alignment.Center
@@ -410,14 +410,14 @@ fun PremiumItemCard(
                     text = itemDetails.item.name,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = if (itemDetails.item.photoPath != null) Color.White else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = itemDetails.space?.name ?: "No location",
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.7f),
+                    color = if (itemDetails.item.photoPath != null) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.secondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -530,7 +530,7 @@ fun TimelineCard(log: ActivityLog, onClickItem: () -> Unit) {
                 text = log.details,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                color = TextPrimary
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }

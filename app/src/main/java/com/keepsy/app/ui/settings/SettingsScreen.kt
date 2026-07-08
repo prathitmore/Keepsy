@@ -100,7 +100,7 @@ fun SettingsScreen(viewModel: KeepsyViewModel, onNavigateToSub: (SubScreen) -> U
                     Text(
                         text = "System Theme",
                         style = MaterialTheme.typography.labelMedium,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.secondary
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -227,14 +227,14 @@ fun PremiumSettingsCard(title: String, content: @Composable () -> Unit) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleSmall,
-            color = PrimaryAccent,
+            color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
         )
         Surface(
-            color = SurfaceSecondary,
+            color = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(24.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.03f))
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
         ) {
             Box(modifier = Modifier.padding(20.dp)) {
                 content()
@@ -245,8 +245,8 @@ fun PremiumSettingsCard(title: String, content: @Composable () -> Unit) {
 
 @Composable
 fun ThemeOption(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val backgroundColor by animateColorAsState(if (selected) PrimaryPurple else SurfaceTertiary)
-    val contentColor by animateColorAsState(if (selected) Color.White else TextSecondary)
+    val backgroundColor by animateColorAsState(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+    val contentColor by animateColorAsState(if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.secondary)
     
     Box(
         modifier = modifier
@@ -270,7 +270,7 @@ fun SettingsActionRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     subtitle: String,
-    iconColor: Color = PrimaryPurple,
+    iconColor: Color = MaterialTheme.colorScheme.primary,
     onClick: () -> Unit
 ) {
     Row(
@@ -298,19 +298,19 @@ fun SettingsActionRow(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.labelSmall,
-                color = TextSecondary
+                color = MaterialTheme.colorScheme.secondary
             )
         }
         Icon(
             imageVector = Icons.Default.ChevronRight,
             contentDescription = null,
-            tint = TextSecondary.copy(alpha = 0.3f),
+            tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
             modifier = Modifier.size(20.dp)
         )
     }

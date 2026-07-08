@@ -34,7 +34,7 @@ fun AuthSuccessScreen(userName: String, isRestoring: Boolean = false) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         KeepsyBackgroundEffects()
@@ -58,14 +58,14 @@ fun AuthSuccessScreen(userName: String, isRestoring: Boolean = false) {
                     text = "Welcome back, $userName.",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "Taking you to your memories...",
                     fontSize = 16.sp,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.secondary,
                     textAlign = TextAlign.Center
                 )
             } else {
@@ -75,14 +75,14 @@ fun AuthSuccessScreen(userName: String, isRestoring: Boolean = false) {
                     text = "Syncing with cloud...",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "Restoring your memories securely.",
                     fontSize = 15.sp,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.secondary,
                     textAlign = TextAlign.Center
                 )
             }

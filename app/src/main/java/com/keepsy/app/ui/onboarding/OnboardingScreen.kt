@@ -43,7 +43,7 @@ fun OnboardingScreenView(viewModel: KeepsyViewModel, onFinished: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         KeepsyBackgroundEffects()
         
@@ -66,7 +66,7 @@ fun OnboardingScreenView(viewModel: KeepsyViewModel, onFinished: () -> Unit) {
                         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
                     )
                     val color by animateColorAsState(
-                        targetValue = if (isActive) PrimaryAccent else Color.DarkGray.copy(alpha = 0.5f)
+                        targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
                     )
                     
                     Box(
@@ -125,13 +125,13 @@ fun OnboardingScreenView(viewModel: KeepsyViewModel, onFinished: () -> Unit) {
                                 modifier = Modifier
                                     .size(120.dp)
                                     .clip(CircleShape)
-                                    .background(PrimaryAccent.copy(alpha = 0.05f)),
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.CardGiftcard,
                                     contentDescription = null,
-                                    tint = PrimaryAccent,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(60.dp)
                                 )
                             }
@@ -140,14 +140,14 @@ fun OnboardingScreenView(viewModel: KeepsyViewModel, onFinished: () -> Unit) {
                                 text = "Let's Get You Started!",
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = TextPrimary,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 textAlign = TextAlign.Center
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = "Create your first storage space to activate your memory tracker.",
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = TextSecondary,
+                                color = MaterialTheme.colorScheme.secondary,
                                 textAlign = TextAlign.Center
                             )
                             Spacer(modifier = Modifier.height(40.dp))
@@ -184,11 +184,11 @@ fun OnboardingScreenView(viewModel: KeepsyViewModel, onFinished: () -> Unit) {
             ) {
                 if (onboardingStep > 1) {
                     TextButton(onClick = { onboardingStep-- }) {
-                        Text("Back", color = TextSecondary)
+                        Text("Back", color = MaterialTheme.colorScheme.secondary)
                     }
                 } else {
                     TextButton(onClick = { onFinished() }) {
-                        Text("Skip", color = TextSecondary)
+                        Text("Skip", color = MaterialTheme.colorScheme.secondary)
                     }
                 }
 
@@ -229,7 +229,7 @@ fun OnboardingContent(
             modifier = Modifier
                 .size(200.dp)
                 .clip(CircleShape)
-                .background(PrimaryPurple.copy(alpha = 0.03f)),
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.03f)),
             contentAlignment = Alignment.Center
         ) {
             // Glow effect simulated with multiple boxes
@@ -237,12 +237,12 @@ fun OnboardingContent(
                 modifier = Modifier
                     .size(140.dp)
                     .clip(CircleShape)
-                    .background(PrimaryPurple.copy(alpha = 0.05f))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f))
             )
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = PrimaryPurple,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .size(100.dp)
                     .graphicsLayer(alpha = 0.9f)
@@ -255,7 +255,7 @@ fun OnboardingContent(
             text = title,
             style = MaterialTheme.typography.displaySmall,
             fontWeight = FontWeight.ExtraBold,
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
         )
         
@@ -264,7 +264,7 @@ fun OnboardingContent(
         Text(
             text = description,
             style = MaterialTheme.typography.bodyLarge,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.secondary,
             textAlign = TextAlign.Center,
             lineHeight = 32.sp,
             modifier = Modifier.padding(horizontal = 24.dp)

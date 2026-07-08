@@ -64,7 +64,7 @@ fun WelcomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         KeepsyBackgroundEffects()
         
@@ -93,13 +93,13 @@ fun WelcomeScreen(
                 Text(
                     text = buildAnnotatedString {
                         append("Keepsy")
-                        withStyle(SpanStyle(color = PrimaryAccent)) {
+                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
                             append("y")
                         }
                     },
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -114,7 +114,7 @@ fun WelcomeScreen(
                     text = "Welcome to Keepsy",
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.ExtraBold,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
                 )
                 
@@ -123,45 +123,14 @@ fun WelcomeScreen(
                 Text(
                     text = stringResource(id = R.string.splash_tagline),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.secondary,
                     textAlign = TextAlign.Center
                 )
             }
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            // 3. Feature Cards
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer(alpha = contentAlpha),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                TrustFeatureCard(
-                    icon = Icons.Default.Security,
-                    title = "Safe & Private",
-                    description = "Your data is encrypted and only yours."
-                )
-                TrustFeatureCard(
-                    icon = Icons.Default.Layers,
-                    title = "Smart & Effortless",
-                    description = "Keepsy organizes your things so you don't have to."
-                )
-                TrustFeatureCard(
-                    icon = Icons.Default.Devices,
-                    title = "Always With You",
-                    description = "Access your memories from any device, anytime."
-                )
-                TrustFeatureCard(
-                    icon = Icons.Default.AutoAwesome,
-                    title = "Beautiful & Modern",
-                    description = "A premium experience designed for everyday use."
-                )
-            }
-
-            Spacer(modifier = Modifier.height(48.dp))
-
-            // 4. CTAs
+            // 3. CTAs
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -177,7 +146,7 @@ fun WelcomeScreen(
                 TextButton(onClick = onSignInClick) {
                     Text(
                         text = "I already have an account",
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.secondary,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium
                     )

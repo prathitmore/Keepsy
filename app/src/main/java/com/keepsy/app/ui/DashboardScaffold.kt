@@ -197,14 +197,14 @@ fun PremiumTopBar(currentTab: TabScreen) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineMedium,
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.ExtraBold
             )
             if (currentTab == TabScreen.Home) {
                 Text(
                     text = "Welcome back to Keepsy",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.secondary
                 )
             }
         }
@@ -212,14 +212,14 @@ fun PremiumTopBar(currentTab: TabScreen) {
         Surface(
             modifier = Modifier.size(42.dp),
             shape = RoundedCornerShape(12.dp),
-            color = SurfaceSecondary,
+            color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Default.PersonOutline,
                     contentDescription = "Profile",
-                    tint = PrimaryPurple,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -254,7 +254,7 @@ fun FloatingBottomNavigation(
                 .height(64.dp)
                 .fillMaxWidth(),
             shape = RoundedCornerShape(32.dp),
-            color = SurfaceSecondary.copy(alpha = 0.85f),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
             shadowElevation = 12.dp
         ) {
@@ -266,7 +266,7 @@ fun FloatingBottomNavigation(
                 items.forEach { item ->
                     val selected = currentTab == item.tab
                     val color by animateColorAsState(
-                        targetValue = if (selected) PrimaryAccent else TextSecondary,
+                        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
                         label = "icon_color"
                     )
                     val scale by animateFloatAsState(
@@ -303,7 +303,7 @@ fun FloatingBottomNavigation(
                                         .padding(top = 4.dp)
                                         .size(4.dp)
                                         .clip(CircleShape)
-                                        .background(PrimaryAccent)
+                                        .background(MaterialTheme.colorScheme.primary)
                                 )
                             }
                         }

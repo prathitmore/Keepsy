@@ -7,13 +7,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.keepsy.app.ui.KeepsyApp
-import com.keepsy.app.ui.theme.Background
 import com.keepsy.app.ui.theme.KeepsyTheme
 import com.keepsy.app.viewmodel.KeepsyViewModel
 
@@ -36,10 +36,10 @@ class MainActivity : ComponentActivity() {
                 false -> false
             }
 
-            KeepsyTheme {
+            KeepsyTheme(darkTheme = useDarkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Background
+                    color = MaterialTheme.colorScheme.background
                 ) {
                     KeepsyApp(viewModel = viewModel)
                 }

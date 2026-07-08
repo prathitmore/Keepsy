@@ -443,17 +443,17 @@ fun KeepsySearchBar(
             Text(
                 text = placeholder,
                 style = MaterialTheme.typography.bodyLarge,
-                color = TextSecondary.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
             ) 
         },
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = PrimaryAccent,
-            unfocusedBorderColor = BorderColor.copy(alpha = 0.4f),
-            focusedTextColor = TextPrimary,
-            unfocusedTextColor = TextPrimary,
-            cursorColor = PrimaryAccent,
-            focusedContainerColor = CardBackground.copy(alpha = 0.7f),
-            unfocusedContainerColor = CardBackground.copy(alpha = 0.4f)
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+            cursorColor = MaterialTheme.colorScheme.primary,
+            focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
         ),
         shape = RoundedCornerShape(20.dp),
         singleLine = true,
@@ -479,18 +479,18 @@ fun SectionHeader(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.ExtraBold,
-                color = TextPrimary
+                color = MaterialTheme.colorScheme.onSurface
             )
             if (action != null) {
                 action()
             }
         }
-        if (subtitle != null && subtitle.isNotEmpty()) {
+        if (subtitle != null && subtitle != "") {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.secondary,
                 lineHeight = 18.sp
             )
         }
@@ -516,15 +516,15 @@ fun EmptyState(
             modifier = Modifier
                 .size(120.dp)
                 .clip(RoundedCornerShape(32.dp))
-                .background(CardBackground)
-                .border(BorderStroke(1.dp, BorderColor.copy(alpha = 0.5f)), RoundedCornerShape(32.dp)),
+                .background(MaterialTheme.colorScheme.surface)
+                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)), RoundedCornerShape(32.dp)),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
                     .size(60.dp)
                     .clip(CircleShape)
-                    .background(PrimaryPurple.copy(alpha = 0.05f)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)),
                 contentAlignment = Alignment.Center
             ) {
                 icon()
@@ -535,14 +535,14 @@ fun EmptyState(
             text = title,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.ExtraBold,
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = description,
             style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.secondary,
             textAlign = TextAlign.Center,
             lineHeight = 22.sp,
             modifier = Modifier.padding(horizontal = 16.dp)

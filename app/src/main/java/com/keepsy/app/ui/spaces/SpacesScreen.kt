@@ -55,7 +55,7 @@ fun SpacesScreen(
                     Icon(
                         imageVector = Icons.Default.Layers,
                         contentDescription = null,
-                        tint = PrimaryPurple,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(32.dp)
                     )
                 },
