@@ -1,19 +1,20 @@
 package com.keepsy.app.service
 
+import android.net.Uri
+import android.os.Bundle
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.crashlytics.FirebaseCrashlytics
-import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageMetadata
 import com.keepsy.app.model.User
-import kotlinx.coroutines.tasks.await
-import android.os.Bundle
-import android.net.Uri
 import com.keepsy.app.utils.KeepsyLogger
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.tasks.await
 
 class FirebaseService(private val analytics: FirebaseAnalytics) {
 
@@ -40,69 +41,100 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
 
     suspend fun updateProfile(name: String?, photoUrl: String?) {
         val user = auth.currentUser ?: throw Exception("No user authenticated")
-        KeepsyLogger.i("Updating profile: name=$name, photoUrl=$photoUrl")
+        KeepsyLogger.i("Updating profile state: name=$name, hasPhoto=${photoUrl != null}")
         
         val profileUpdates = UserProfileChangeRequest.Builder()
-        name?.let { profileUpdates.setDisplayName(it) }
-        // For photoUrl, if it's empty string we want to remove it
+        if (name != null) profileUpdates.setDisplayName(name)
+        
         if (photoUrl == "") {
+            KeepsyLogger.d("Clearing profile photo URL in Auth")
             profileUpdates.setPhotoUri(null)
         } else if (photoUrl != null) {
+            KeepsyLogger.d("Setting new photo URL in Auth: $photoUrl")
             profileUpdates.setPhotoUri(Uri.parse(photoUrl))
         }
         
-        user.updateProfile(profileUpdates.build()).await()
-        user.reload().await()
+        try {
+            user.updateProfile(profileUpdates.build()).await()
+            user.reload().await()
+            KeepsyLogger.d("Firebase Auth profile updated successfully")
+        } catch (e: Exception) {
+            KeepsyLogger.e("Auth update failed", e)
+        }
         
         // Also update Firestore
         val updates = HashMap<String, Any?>()
-        name?.let { updates["displayName"] = it }
-        // In Firestore, store null or empty string to represent removal
+        if (name != null) updates["displayName"] = name
         if (photoUrl != null) {
             updates["photoUrl"] = if (photoUrl == "") null else photoUrl
         }
         
         if (updates.isNotEmpty()) {
             firestore.collection("users").document(user.uid).set(updates, SetOptions.merge()).await()
-            KeepsyLogger.d("Firestore profile updated successfully")
+            KeepsyLogger.i("Firestore profile document updated successfully")
         }
     }
 
     suspend fun uploadProfilePicture(uri: Uri): String {
         val uid = auth.currentUser?.uid ?: throw Exception("No user authenticated")
-        KeepsyLogger.i("Uploading profile picture for $uid from $uri")
+        KeepsyLogger.i("Starting upload to Firebase Storage for user: $uid")
         
-        val ref = storage.reference.child("users/$uid/profile/avatar.jpg")
+        val storagePath = "users/$uid/profile/avatar.jpg"
+        val ref = storage.reference.child(storagePath)
         
         try {
-            // Upload the file
-            ref.putFile(uri).await()
-            KeepsyLogger.d("Upload completed to: ${ref.path}")
+            val metadata = StorageMetadata.Builder()
+                .setContentType("image/jpeg")
+                .setCustomMetadata("uid", uid)
+                .build()
+
+            KeepsyLogger.d("Executing putFile to $storagePath")
+            ref.putFile(uri, metadata).await()
+            KeepsyLogger.i("Upload completed successfully to $storagePath")
             
-            // Get download URL
-            val downloadUrl = ref.downloadUrl.await().toString()
-            KeepsyLogger.i("Generated download URL: $downloadUrl")
-            return downloadUrl
+            // Eventual consistency protection
+            var downloadUrl: String? = null
+            var retryCount = 0
+            val maxRetries = 3
+            
+            while (downloadUrl == null && retryCount < maxRetries) {
+                try {
+                    downloadUrl = ref.downloadUrl.await().toString()
+                    KeepsyLogger.d("Successfully retrieved download URL: $downloadUrl")
+                } catch (e: Exception) {
+                    retryCount++
+                    KeepsyLogger.w("Retrying download URL retrieval (attempt $retryCount)...")
+                    delay(1000)
+                    if (retryCount >= maxRetries) throw e
+                }
+            }
+            
+            return downloadUrl ?: throw Exception("Failed to retrieve download URL after retries")
         } catch (e: Exception) {
-            KeepsyLogger.e("Firebase Storage Upload Failed", e)
+            KeepsyLogger.e("CRITICAL: Firebase Storage Upload/Download Failed", e)
             throw e
         }
     }
 
     suspend fun deleteProfilePicture() {
         val uid = auth.currentUser?.uid ?: throw Exception("No user authenticated")
-        KeepsyLogger.i("Deleting profile picture for $uid")
+        KeepsyLogger.i("Requested deletion of profile picture for user: $uid")
         
-        val ref = storage.reference.child("users/$uid/profile/avatar.jpg")
+        val storagePath = "users/$uid/profile/avatar.jpg"
+        val ref = storage.reference.child(storagePath)
+        
         try {
             ref.delete().await()
-            KeepsyLogger.d("Profile picture deleted from Storage")
+            KeepsyLogger.i("Physical file deleted from Storage: $storagePath")
         } catch (e: Exception) {
-            // If it doesn't exist, we don't care, just log it
-            KeepsyLogger.w("Profile picture deletion skipped or failed: ${e.message}")
+            val msg = e.message ?: ""
+            if (msg.contains("Object does not exist")) {
+                KeepsyLogger.i("Deletion skipped: File already non-existent in Storage.")
+            } else {
+                KeepsyLogger.w("Non-critical deletion failure: $msg")
+            }
         }
         
-        // Clear references in Auth and Firestore
         updateProfile(null, "")
     }
 
@@ -110,12 +142,21 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         val user = auth.currentUser ?: throw Exception("No user authenticated")
         val email = user.email ?: throw Exception("No email associated")
         
-        // Re-authenticate
-        val credential = EmailAuthProvider.getCredential(email, current)
+        val credential = com.google.firebase.auth.EmailAuthProvider.getCredential(email, current)
         user.reauthenticate(credential).await()
         
-        // Update password
         user.updatePassword(new).await()
+    }
+
+    suspend fun reloadUser(): Boolean {
+        auth.currentUser?.reload()?.await()
+        val isVerified = auth.currentUser?.isEmailVerified ?: false
+        KeepsyLogger.i("User reloaded. Email verified: $isVerified")
+        return isVerified
+    }
+
+    fun isEmailVerified(): Boolean {
+        return auth.currentUser?.isEmailVerified ?: false
     }
 
     suspend fun signInWithEmail(email: String, password: String): User {
@@ -147,12 +188,11 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
             val result = auth.createUserWithEmailAndPassword(email, password).await()
             val firebaseUser = result.user ?: throw Exception("Registration failed - no user returned")
             
-            val profileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+            val profileUpdates = UserProfileChangeRequest.Builder()
                 .setDisplayName(name)
                 .build()
             firebaseUser.updateProfile(profileUpdates).await()
 
-            // Send verification email automatically
             firebaseUser.sendEmailVerification().await()
             KeepsyLogger.i("Verification email sent to: $email")
 
@@ -173,17 +213,6 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
             KeepsyLogger.e("Email sign up failed for $email", e)
             throw e
         }
-    }
-
-    suspend fun reloadUser(): Boolean {
-        auth.currentUser?.reload()?.await()
-        val isVerified = auth.currentUser?.isEmailVerified ?: false
-        KeepsyLogger.i("User reloaded. Email verified: $isVerified")
-        return isVerified
-    }
-
-    fun isEmailVerified(): Boolean {
-        return auth.currentUser?.isEmailVerified ?: false
     }
 
     suspend fun signInWithCredential(credential: AuthCredential): User {
@@ -233,7 +262,6 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
             userRef.set(updates, SetOptions.merge()).await()
             KeepsyLogger.d("updateUserProfile: firestore update success")
             
-            // Set user ID for Crashlytics
             crashlytics.setUserId(user.uid)
             user.email?.let { crashlytics.setCustomKey("email", it) }
         } catch (e: Exception) {
@@ -289,7 +317,7 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
 
     private fun logEvent(name: String, method: String?) {
         val bundle = Bundle()
-        method?.let { bundle.putString(FirebaseAnalytics.Param.METHOD, it) }
+        method?.let { bundle.putString(com.google.firebase.analytics.FirebaseAnalytics.Param.METHOD, it) }
         analytics.logEvent(name, bundle)
     }
 }

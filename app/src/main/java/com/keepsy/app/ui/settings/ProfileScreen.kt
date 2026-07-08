@@ -85,14 +85,21 @@ fun ProfileScreen(
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (p.photoUrl != null && p.photoUrl != "") {
+                            var showInitials by remember(p.photoUrl) { 
+                                mutableStateOf(p.photoUrl == null || p.photoUrl == "") 
+                            }
+                            
+                            if (!showInitials) {
                                 AsyncImage(
                                     model = p.photoUrl,
                                     contentDescription = "Avatar",
                                     modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
+                                    contentScale = ContentScale.Crop,
+                                    onError = { showInitials = true }
                                 )
-                            } else {
+                            }
+                            
+                            if (showInitials) {
                                 Text(
                                     text = AvatarUtils.getInitials(p.name),
                                     color = Color.White,

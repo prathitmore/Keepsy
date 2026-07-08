@@ -44,10 +44,21 @@ fun EditProfileScreen(
 
     var showPhotoOptions by remember { mutableStateOf(false) }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
+
     val photoLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let { viewModel.updateProfilePicture(it) }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success: Boolean ->
+        if (success) {
+            tempCameraUri?.let { viewModel.updateProfilePicture(it) }
+        }
     }
 
     if (showPhotoOptions) {
@@ -65,6 +76,13 @@ fun EditProfileScreen(
                 Text("Profile Photo", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
                 Spacer(modifier = Modifier.height(24.dp))
                 
+                PhotoOptionItem(Icons.Default.Camera, "Take Photo") {
+                    showPhotoOptions = false
+                    val uri = com.keepsy.app.utils.ImageUtils.createTempImageUri(context)
+                    tempCameraUri = uri
+                    cameraLauncher.launch(uri)
+                }
+
                 PhotoOptionItem(Icons.Default.PhotoLibrary, "Choose from Gallery") {
                     showPhotoOptions = false
                     photoLauncher.launch("image/*")
@@ -129,14 +147,21 @@ fun EditProfileScreen(
                         .clickable { showPhotoOptions = true },
                     contentAlignment = Alignment.Center
                 ) {
-                    if (profile?.photoUrl != null && profile?.photoUrl != "") {
+                    var showInitials by remember(profile?.photoUrl) { 
+                        mutableStateOf(profile?.photoUrl == null || profile?.photoUrl == "") 
+                    }
+                    
+                    if (!showInitials) {
                         AsyncImage(
                             model = profile?.photoUrl,
                             contentDescription = "Profile Picture",
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Crop,
+                            onError = { showInitials = true }
                         )
-                    } else {
+                    }
+                    
+                    if (showInitials) {
                         Text(
                             text = AvatarUtils.getInitials(name),
                             color = Color.White,

@@ -274,14 +274,21 @@ fun PremiumTopBar(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
         ) {
             Box(contentAlignment = Alignment.Center) {
-                if (profile?.photoUrl != null && profile?.photoUrl != "") {
+                var showInitials by remember(profile?.photoUrl) { 
+                    mutableStateOf(profile?.photoUrl == null || profile?.photoUrl == "") 
+                }
+
+                if (!showInitials) {
                     AsyncImage(
                         model = profile?.photoUrl,
                         contentDescription = "Account",
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        onError = { showInitials = true }
                     )
-                } else {
+                } 
+                
+                if (showInitials) {
                     Text(
                         text = com.keepsy.app.utils.AvatarUtils.getInitials(profile?.name),
                         style = MaterialTheme.typography.titleMedium,

@@ -8,7 +8,19 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 
+import androidx.core.content.FileProvider
+import com.keepsy.app.BuildConfig
+
 object ImageUtils {
+    fun createTempImageUri(context: Context): Uri {
+        val tempFile = File(context.cacheDir, "camera_capture.jpg")
+        return FileProvider.getUriForFile(
+            context,
+            "${BuildConfig.APPLICATION_ID}.fileprovider",
+            tempFile
+        )
+    }
+
     fun compressImage(context: Context, uri: Uri): Uri? {
         return try {
             val inputStream = context.contentResolver.openInputStream(uri)
