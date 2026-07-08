@@ -30,7 +30,8 @@ class KeepsyRepository(
         }
     }
 
-    fun refreshAuthState() {
+    suspend fun refreshAuthState() {
+        firebaseService.reloadUser()
         val user = firebaseService.getCurrentUser()
         if (user != null) {
             _authState.value = AuthState.Authenticated(user)
