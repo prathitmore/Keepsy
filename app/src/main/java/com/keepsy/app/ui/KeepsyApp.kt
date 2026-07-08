@@ -57,14 +57,13 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
 
     val onboardingDone by viewModel.isOnboardingCompleted.collectAsStateWithLifecycle()
     val isRestoring by viewModel.isRestoringData.collectAsStateWithLifecycle()
-    
-    var hasAttemptedCloudSync by remember { mutableStateOf(false) }
+    val isStatusChecked by viewModel.isStatusChecked.collectAsStateWithLifecycle()
 
     // 1. Monitor state changes to decide on screen transitions
-    LaunchedEffect(authState, isSplashAnimationComplete, onboardingDone, isRestoring) {
+    LaunchedEffect(authState, isSplashAnimationComplete, onboardingDone, isRestoring, isStatusChecked) {
         if (!isSplashAnimationComplete) return@LaunchedEffect
         
-        KeepsyLogger.d("KeepsyApp: Navigating - Auth: $authState, Onboarding: $onboardingDone, Restoring: $isRestoring")
+        KeepsyLogger.d("KeepsyApp: Navigating - Auth: $authState, Onboarding: $onboardingDone, Restoring: $isRestoring, Checked: $isStatusChecked")
         
         when (authState) {
             is AuthState.Authenticated -> {
@@ -72,31 +71,16 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
                 if (!user.isEmailVerified) {
                     appScreen = Screen.VerifyEmail
                 } else {
-                    // 1. Check cloud if we haven't confirmed status yet
-                    if (!onboardingDone && !hasAttemptedCloudSync && !isRestoring) {
-                        hasAttemptedCloudSync = true
-                        KeepsyLogger.i("KeepsyApp: Verifying returning user status...")
-                        viewModel.checkOnboardingStatus()
-                        return@LaunchedEffect
-                    }
-                    
-                    // 2. While verifying/restoring, stay on success screen
-                    if (isRestoring) {
-                        if (appScreen !is Screen.AuthSuccess) {
+                    // While checking cloud status, stay on success screen
+                    if (isRestoring || !isStatusChecked) {
+                        if (appScreen !is Screen.AuthSuccess && appScreen != Screen.Dashboard) {
                             appScreen = Screen.AuthSuccess(user.name ?: user.email ?: "Friend")
                         }
-                        return@LaunchedEffect
-                    }
-
-                    // 3. Final Decision
-                    if (onboardingDone) {
-                        if (appScreen != Screen.Dashboard) {
-                            KeepsyLogger.i("KeepsyApp: User ready, showing Dashboard")
+                    } else {
+                        // Check is complete
+                        if (onboardingDone) {
                             appScreen = Screen.Dashboard
-                        }
-                    } else if (hasAttemptedCloudSync) {
-                        if (appScreen != Screen.Onboarding) {
-                            KeepsyLogger.i("KeepsyApp: New user confirmed, showing Onboarding")
+                        } else {
                             appScreen = Screen.Onboarding
                         }
                     }
@@ -104,7 +88,6 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
             }
             is AuthState.Unauthenticated, is AuthState.Error -> {
                 appScreen = Screen.Auth
-                hasAttemptedCloudSync = false
             }
             else -> {}
         }
@@ -128,12 +111,9 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
     val errorState by viewModel.errorState.collectAsStateWithLifecycle()
 
     LaunchedEffect(errorState) {
-        val error = errorState
-        if (error != null) {
-            val msg = error.message
-            // Filter out technical lifecycle errors from being shown to users
-            if (msg != "" && msg != "The coroutine scope left the composition") {
-                snackbarHostState.showSnackbar(msg)
+        errorState?.let { error ->
+            if (error.message != "") {
+                snackbarHostState.showSnackbar(error.message)
             }
             viewModel.clearError()
         }

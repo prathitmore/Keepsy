@@ -62,6 +62,9 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
     val isOnboardingCompleted = settingsManager.isOnboardingCompleted
     val darkModePreference = settingsManager.darkModePreference
 
+    private val _isStatusChecked = MutableStateFlow(false)
+    val isStatusChecked: StateFlow<Boolean> = _isStatusChecked.asStateFlow()
+
     // Database source streams
     val spaces = repository.spaces
     val categories = repository.categories
@@ -321,6 +324,21 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
                 syncManager.schedulePeriodicSync()
                 // Start network observer
                 syncManager.startNetworkObservation(this)
+                
+                // Observe Auth State to trigger onboarding check automatically on login
+                authState.collect { auth ->
+                    if (auth is AuthState.Authenticated) {
+                        val currentUid = auth.user.uid
+                        val lastCheckedUid = settingsManager.lastUserId.value
+                        
+                        if (currentUid != lastCheckedUid || !isStatusChecked.value) {
+                            checkOnboardingStatus()
+                        }
+                    } else if (auth is AuthState.Unauthenticated) {
+                        _isStatusChecked.value = false
+                    }
+                }
+
                 KeepsyLogger.i("KeepsyViewModel initialization complete")
             } catch (e: Exception) {
                 KeepsyLogger.e("KeepsyViewModel initialization failed", e)
@@ -365,9 +383,10 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
             // 2. Check local database for ANY existing content
             val spaceCount = db.appDao().getSpaceCount()
             val itemCount = db.appDao().getDirtyItems().size + db.appDao().getLiveActiveItems().first().size
+            val hasActivity = db.appDao().getLiveActivityLogs().first().isNotEmpty()
             
-            if (spaceCount > 0 || itemCount > 0) {
-                KeepsyLogger.i("Content found ($spaceCount spaces, $itemCount items), marking onboarding as completed")
+            if (spaceCount > 0 || itemCount > 0 || hasActivity) {
+                KeepsyLogger.i("Content found ($spaceCount spaces, $itemCount items, logs: $hasActivity), marking onboarding as completed")
                 settingsManager.setOnboardingCompleted(true)
             } else {
                 // 3. Fallback: Check cloud profile and raw collections explicitly
@@ -382,6 +401,7 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
                     settingsManager.setOnboardingCompleted(false)
                 }
             }
+            _isStatusChecked.value = true
         } catch (e: Exception) {
             KeepsyLogger.e("Failed to check onboarding status", e)
             handleError(e)

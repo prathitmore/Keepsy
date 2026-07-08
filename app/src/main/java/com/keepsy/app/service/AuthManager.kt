@@ -60,7 +60,9 @@ class AuthManager(private val context: Context) {
                 }
             } catch (e: GetCredentialException) {
                 Log.e(TAG, "signInWithGoogle: Credential Manager Error: ${e.message}")
-                val isTechnical = e.message?.contains("coroutine scope", ignoreCase = true) == true
+                val msg = e.message ?: ""
+                val isTechnical = msg.contains("coroutine scope", ignoreCase = true) || 
+                                 msg.contains("composition", ignoreCase = true)
                 if (!isTechnical) {
                     viewModel.handleExternalError(e)
                 }
