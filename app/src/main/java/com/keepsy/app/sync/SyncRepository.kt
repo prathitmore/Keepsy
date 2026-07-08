@@ -64,12 +64,11 @@ class SyncRepository(
                 }
             }
             
-            // 2. Deep scan collections
+            // 2. Deep scan collections for existence (limit 1 for speed)
             val collections = listOf("spaces", "items", "activityLogs")
             for (coll in collections) {
-                val entities = firestoreService.getAllEntities(coll)
-                if (entities.isNotEmpty()) {
-                    KeepsyLogger.i("CloudCheck: Found ${entities.size} entities in $coll")
+                if (firestoreService.checkIfCollectionHasData(coll)) {
+                    KeepsyLogger.i("CloudCheck: Data found in $coll")
                     return@withContext true
                 }
             }

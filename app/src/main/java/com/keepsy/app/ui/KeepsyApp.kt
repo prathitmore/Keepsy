@@ -21,6 +21,7 @@ import com.keepsy.app.ui.onboarding.OnboardingScreenView
 import com.keepsy.app.viewmodel.KeepsyViewModel
 import com.keepsy.app.utils.KeepsyLogger
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
@@ -57,12 +58,27 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
         return false
     }
 
+    var forceSkipLoading by remember { mutableStateOf(false) }
+    
+    // Safety timeout: Never stay on success screen for more than 15 seconds
+    LaunchedEffect(authState) {
+        if (authState is AuthState.Authenticated) {
+            delay(15000)
+            if (appScreen is Screen.AuthSuccess) {
+                KeepsyLogger.w("KeepsyApp: Safety timeout triggered, forcing navigation")
+                forceSkipLoading = true
+            }
+        } else {
+            forceSkipLoading = false
+        }
+    }
+
     // Navigation logic observer
-    LaunchedEffect(authState, isSplashAnimationComplete, onboardingDone, isRestoringData, isStatusChecked) {
+    LaunchedEffect(authState, isSplashAnimationComplete, onboardingDone, isRestoringData, isStatusChecked, forceSkipLoading) {
         if (!isSplashAnimationComplete) return@LaunchedEffect
         
         val currentAuth = authState
-        KeepsyLogger.d("KeepsyApp: Navigating - Auth: $currentAuth, Onboarding: $onboardingDone, Restoring: $isRestoringData, Checked: $isStatusChecked")
+        KeepsyLogger.d("KeepsyApp: Navigating - Auth: $currentAuth, Onboarding: $onboardingDone, Restoring: $isRestoringData, Checked: $isStatusChecked, Forced: $forceSkipLoading")
         
         when (currentAuth) {
             is AuthState.Authenticated -> {
@@ -71,7 +87,14 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
                     appScreen = Screen.VerifyEmail
                 } else {
                     // While checking cloud status or syncing, stay on success screen
-                    if (isRestoringData || !isStatusChecked) {
+                    // Added a safety check: if we are Authenticated but check hasn't started, trigger it
+                    if (!isStatusChecked && !isRestoringData) {
+                        scope.launch {
+                            viewModel.checkOnboardingStatus()
+                        }
+                    }
+
+                    if ((isRestoringData || !isStatusChecked) && !forceSkipLoading) {
                         if (appScreen !is Screen.AuthSuccess && appScreen != Screen.Dashboard) {
                             appScreen = Screen.AuthSuccess(user.name ?: user.email ?: "Friend")
                         }

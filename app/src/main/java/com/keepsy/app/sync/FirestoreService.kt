@@ -52,6 +52,12 @@ class FirestoreService {
         }
     }
 
+    suspend fun checkIfCollectionHasData(collection: String): Boolean {
+        val coll = userDoc?.collection(collection) ?: return false
+        val snapshot = coll.limit(1).get().await()
+        return !snapshot.isEmpty
+    }
+
     suspend fun getProfile(): Map<String, Any?>? {
         val doc = userDoc?.get()?.await() ?: return null
         return doc.data
