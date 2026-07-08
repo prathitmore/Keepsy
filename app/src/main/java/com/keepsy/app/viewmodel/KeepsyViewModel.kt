@@ -298,7 +298,7 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
             UserProfile(
                 uid = user.uid,
                 name = user.name ?: "Friend",
-                displayName = user.name,
+                displayName = user.name ?: "Friend", // Fallback to name if display name missing
                 email = user.email ?: "",
                 photoUrl = user.photoUrl,
                 memberSince = user.createdAt ?: System.currentTimeMillis(),

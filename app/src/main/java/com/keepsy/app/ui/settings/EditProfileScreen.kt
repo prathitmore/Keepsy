@@ -41,6 +41,7 @@ fun EditProfileScreen(
     
     var name by remember(profile) { mutableStateOf(profile?.name ?: "") }
     var displayName by remember(profile) { mutableStateOf(profile?.displayName ?: "") }
+    var localPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
     var showPhotoOptions by remember { mutableStateOf(false) }
 
@@ -50,14 +51,20 @@ fun EditProfileScreen(
     val photoLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { viewModel.updateProfilePicture(it) }
+        uri?.let { 
+            localPhotoUri = it
+            viewModel.updateProfilePicture(it) 
+        }
     }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success: Boolean ->
         if (success) {
-            tempCameraUri?.let { viewModel.updateProfilePicture(it) }
+            tempCameraUri?.let { 
+                localPhotoUri = it
+                viewModel.updateProfilePicture(it) 
+            }
         }
     }
 
@@ -147,21 +154,21 @@ fun EditProfileScreen(
                         .clickable { showPhotoOptions = true },
                     contentAlignment = Alignment.Center
                 ) {
-                    var showInitials by remember(profile?.photoUrl) { 
-                        mutableStateOf(profile?.photoUrl == null || profile?.photoUrl == "") 
-                    }
-                    
-                    if (!showInitials) {
+                    if (localPhotoUri != null) {
+                        AsyncImage(
+                            model = localPhotoUri,
+                            contentDescription = "Preview",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else if (profile?.photoUrl != null && profile?.photoUrl != "") {
                         AsyncImage(
                             model = profile?.photoUrl,
                             contentDescription = "Profile Picture",
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                            onError = { showInitials = true }
+                            contentScale = ContentScale.Crop
                         )
-                    }
-                    
-                    if (showInitials) {
+                    } else {
                         Text(
                             text = AvatarUtils.getInitials(name),
                             color = Color.White,
