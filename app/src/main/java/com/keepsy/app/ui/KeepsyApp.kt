@@ -70,7 +70,12 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
                 if (!user.isEmailVerified) {
                     appScreen = Screen.VerifyEmail
                 } else {
-                    // We stay on Success for a moment before branching
+                    // 1. Check cloud for onboarding status if not already known
+                    if (!onboardingDone) {
+                        viewModel.checkOnboardingStatus()
+                    }
+
+                    // 2. We stay on Success for a moment before branching
                     if (appScreen !is Screen.AuthSuccess && appScreen != Screen.Dashboard && appScreen != Screen.Onboarding) {
                         appScreen = Screen.AuthSuccess(user.name ?: user.email ?: "Friend")
                         delay(1800)
