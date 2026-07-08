@@ -357,11 +357,11 @@ fun PremiumItemCard(
     Card(
         onClick = onClick,
         modifier = modifier
-            .height(180.dp)
+            .height(160.dp)
             .graphicsLayer(scaleX = scale, scaleY = scale),
-        shape = RoundedCornerShape(32.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (itemDetails.item.photoPath != null && File(itemDetails.item.photoPath).exists()) {
@@ -371,13 +371,13 @@ fun PremiumItemCard(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
-                // Premium gradient overlay for text readability
+                // Overlay for readability
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f))
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
                             )
                         )
                 )
@@ -395,8 +395,8 @@ fun PremiumItemCard(
                     Icon(
                         imageVector = getSmartItemIconVector(itemDetails.item.name, itemDetails.category?.icon),
                         contentDescription = null,
-                        tint = parseCategoryColor(itemDetails.category?.color).copy(alpha = 0.6f),
-                        modifier = Modifier.size(56.dp)
+                        tint = parseCategoryColor(itemDetails.category?.color).copy(alpha = 0.4f),
+                        modifier = Modifier.size(48.dp)
                     )
                 }
             }
@@ -404,32 +404,16 @@ fun PremiumItemCard(
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(20.dp)
+                    .padding(16.dp)
             ) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = itemDetails.category?.name ?: "Other",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
                 Text(
                     text = itemDetails.item.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
                     color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                
                 Text(
                     text = itemDetails.space?.name ?: "No location",
                     style = MaterialTheme.typography.labelSmall,

@@ -768,7 +768,7 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
     fun updateProfile(name: String, displayName: String?) {
         viewModelScope.launch {
             try {
-                accountRepository.updateProfile(name, displayName)
+                accountRepository.updateProfile(name, displayName, null)
                 repository.refreshAuthState()
                 _refreshTrigger.value = System.currentTimeMillis()
             } catch (e: Exception) {
@@ -788,7 +788,7 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
                 _errorState.value = null
                 
                 val url = accountRepository.uploadProfilePhoto(uploadUri)
-                accountRepository.updateProfile(null, url)
+                accountRepository.updateProfile(null, null, url)
                 repository.refreshAuthState()
                 _refreshTrigger.value = System.currentTimeMillis()
                 KeepsyLogger.i("Profile picture update flow completed successfully")

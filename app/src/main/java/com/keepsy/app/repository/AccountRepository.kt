@@ -20,8 +20,8 @@ class AccountRepository(
         firebaseService.deleteProfilePicture()
     }
 
-    suspend fun updateProfile(name: String?, photoUrl: String?) {
-        firebaseService.updateProfile(name, photoUrl)
+    suspend fun updateProfile(name: String?, displayName: String?, photoUrl: String?) {
+        firebaseService.updateProfile(name, displayName, photoUrl)
     }
 
     suspend fun changePassword(current: String, new: String) {

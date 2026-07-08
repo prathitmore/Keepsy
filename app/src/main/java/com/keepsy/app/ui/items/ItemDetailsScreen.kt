@@ -242,11 +242,7 @@ fun ItemDetailsScreen(
                                                 .padding(start = 20.dp)
                                                 .width(2.dp)
                                                 .height(20.dp)
-                                                .background(
-                                                    Brush.verticalGradient(
-                                                        colors = listOf(PrimaryAccent.copy(alpha = 0.5f), Color.Transparent)
-                                                    )
-                                                )
+                                                .background(PrimaryAccent.copy(alpha = 0.3f))
                                         )
                                     }
                                 }
