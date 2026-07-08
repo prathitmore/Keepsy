@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,6 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.keepsy.app.model.UserProfile
+import com.keepsy.app.navigation.SubScreen
 import com.keepsy.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,14 +30,13 @@ import com.keepsy.app.ui.theme.*
 fun AccountBottomSheet(
     profile: UserProfile?,
     onClose: () -> Unit,
-    onNavigateToProfile: () -> Unit,
-    onSignOut: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSub: (SubScreen) -> Unit,
+    onSignOut: () -> Unit
 ) {
     ModalBottomSheet(
         onDismissRequest = onClose,
-        containerColor = Background,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = BorderColor) },
+        containerColor = MaterialTheme.colorScheme.background,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)) },
         shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
     ) {
         Column(
@@ -45,17 +47,16 @@ fun AccountBottomSheet(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Account",
+                text = "Account Center",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.ExtraBold,
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.align(Alignment.Start)
             )
             
             Spacer(modifier = Modifier.height(24.dp))
             
             profile?.let { p ->
-                // User Info Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -71,13 +72,14 @@ fun AccountBottomSheet(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
+                        val initials = remember(p.name) {
+                            if (p.name == "") "U" else p.name[0].toString()
+                        }
                         Text(
-                            text = p.name,
+                            text = initials,
                             color = Color.White,
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            fontWeight = FontWeight.Bold
                         )
                     }
                     
@@ -88,59 +90,56 @@ fun AccountBottomSheet(
                             text = p.name,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = p.email,
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.secondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Surface(
-                            color = PrimaryAccent.copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = p.planType,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = PrimaryAccent,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
                     }
                 }
             }
             
             Spacer(modifier = Modifier.height(32.dp))
             
-            // Menu Items
             MenuSection(title = "ACCOUNT") {
-                AccountMenuItem(Icons.Default.Person, "Profile", "View and edit your profile", onClick = {
+                AccountMenuItem(Icons.Default.Person, "My Profile", "Detailed account info", onClick = {
                     onClose()
-                    onNavigateToProfile()
+                    onNavigateToSub(SubScreen.Profile)
                 })
-                AccountMenuItem(Icons.Default.CardMembership, "Subscription", "Manage your plan")
-                AccountMenuItem(Icons.Default.SdStorage, "Usage", "View your storage & usage")
-                AccountMenuItem(Icons.Default.CloudSync, "Backup & Sync", "Cloud sync is enabled", showBadge = true)
+                AccountMenuItem(Icons.Default.Edit, "Edit Profile", "Change name & photo", onClick = {
+                    onClose()
+                    onNavigateToSub(SubScreen.EditProfile)
+                })
+                AccountMenuItem(Icons.Default.Backup, "Backup & Sync", "Secure your memories", onClick = {
+                    onClose()
+                    onNavigateToSub(SubScreen.BackupSync)
+                })
+                AccountMenuItem(Icons.Default.CardMembership, "Subscription", "Manage premium access", onClick = {
+                    onClose()
+                    onNavigateToSub(SubScreen.Subscription)
+                })
             }
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            MenuSection(title = "PREFERENCES") {
-                AccountMenuItem(Icons.Default.Settings, "App Settings", "Customize your experience", onClick = {
+            MenuSection(title = "SECURITY & SYSTEM") {
+                AccountMenuItem(Icons.Default.Security, "Security Center", "Password & device info", onClick = {
                     onClose()
-                    onNavigateToSettings()
+                    onNavigateToSub(SubScreen.SecurityCenter)
                 })
-                AccountMenuItem(Icons.Default.Notifications, "Notifications", "Manage notifications")
             }
             
             Spacer(modifier = Modifier.height(24.dp))
             
             MenuSection(title = "SUPPORT") {
-                AccountMenuItem(Icons.Default.HelpOutline, "Help & FAQ")
-                AccountMenuItem(Icons.Default.MailOutline, "Contact Support")
-                AccountMenuItem(Icons.Default.Info, "About Keepsy", "Version 1.0.0")
+                AccountMenuItem(Icons.AutoMirrored.Filled.HelpOutline, "Help & FAQ")
+                AccountMenuItem(Icons.Default.Info, "About Keepsy", "Version 1.2")
             }
             
             Spacer(modifier = Modifier.height(32.dp))
@@ -153,7 +152,7 @@ fun AccountBottomSheet(
                 colors = ButtonDefaults.buttonColors(containerColor = ErrorRed.copy(alpha = 0.1f)),
                 shape = RoundedCornerShape(16.dp)
             ) {
-                Icon(Icons.Default.Logout, contentDescription = null, tint = ErrorRed, modifier = Modifier.size(20.dp))
+                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = ErrorRed, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(12.dp))
                 Text("Sign Out", color = ErrorRed, fontWeight = FontWeight.Bold)
             }
@@ -167,7 +166,7 @@ fun MenuSection(title: String, content: @Composable ColumnScope.() -> Unit) {
         Text(
             text = title,
             style = MaterialTheme.typography.labelSmall,
-            color = TextSecondary.copy(alpha = 0.6f),
+            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f),
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.sp
         )
@@ -194,25 +193,25 @@ fun AccountMenuItem(
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(CircleShape)
-                .background(PrimaryPurple.copy(alpha = 0.1f)),
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = PrimaryPurple, modifier = Modifier.size(20.dp))
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
         }
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(title, style = MaterialTheme.typography.bodyLarge, color = TextPrimary, fontWeight = FontWeight.Bold)
+                Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                 if (showBadge) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(SuccessGreen))
                 }
             }
             if (subtitle != null) {
-                Text(subtitle, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
             }
         }
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextSecondary.copy(alpha = 0.3f), modifier = Modifier.size(20.dp))
+        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f), modifier = Modifier.size(20.dp))
     }
 }

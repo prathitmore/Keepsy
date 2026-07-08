@@ -4,17 +4,22 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import com.google.firebase.auth.EmailAuthProvider
+import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.storage.FirebaseStorage
 import com.keepsy.app.model.User
 import kotlinx.coroutines.tasks.await
 import android.os.Bundle
+import android.net.Uri
 import com.keepsy.app.utils.KeepsyLogger
 
 class FirebaseService(private val analytics: FirebaseAnalytics) {
 
     private val auth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
+    private val storage = FirebaseStorage.getInstance()
     private val crashlytics = FirebaseCrashlytics.getInstance()
 
     fun getCurrentUser(): User? {
@@ -27,9 +32,47 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
                 email = it.email,
                 photoUrl = it.photoUrl?.toString(),
                 isAnonymous = it.isAnonymous,
-                isEmailVerified = it.isEmailVerified
+                isEmailVerified = it.isEmailVerified,
+                createdAt = it.metadata?.creationTimestamp
             )
         }
+    }
+
+    suspend fun updateProfile(name: String?, photoUrl: String?) {
+        val user = auth.currentUser ?: throw Exception("No user authenticated")
+        val profileUpdates = UserProfileChangeRequest.Builder()
+        name?.let { profileUpdates.setDisplayName(it) }
+        photoUrl?.let { profileUpdates.setPhotoUri(Uri.parse(it)) }
+        
+        user.updateProfile(profileUpdates.build()).await()
+        user.reload().await()
+        
+        // Also update Firestore
+        val updates = HashMap<String, Any?>()
+        name?.let { updates["displayName"] = it }
+        photoUrl?.let { updates["photoUrl"] = it }
+        if (updates.isNotEmpty()) {
+            firestore.collection("users").document(user.uid).set(updates, SetOptions.merge()).await()
+        }
+    }
+
+    suspend fun uploadProfilePicture(uri: Uri): String {
+        val uid = auth.currentUser?.uid ?: throw Exception("No user authenticated")
+        val ref = storage.reference.child("profiles/$uid.jpg")
+        ref.putFile(uri).await()
+        return ref.downloadUrl.await().toString()
+    }
+
+    suspend fun changePassword(current: String, new: String) {
+        val user = auth.currentUser ?: throw Exception("No user authenticated")
+        val email = user.email ?: throw Exception("No email associated")
+        
+        // Re-authenticate
+        val credential = EmailAuthProvider.getCredential(email, current)
+        user.reauthenticate(credential).await()
+        
+        // Update password
+        user.updatePassword(new).await()
     }
 
     suspend fun signInWithEmail(email: String, password: String): User {

@@ -33,15 +33,25 @@ data class User(
 data class UserProfile(
     val uid: String,
     val name: String,
+    val displayName: String?,
     val email: String,
     val photoUrl: String?,
     val planType: String = "Free Plan",
     val memberSince: Long,
     val lastSyncAt: Long?,
-    val totalItems: Int,
-    val totalSpaces: Int,
+    val totalItems: Int = 0,
+    val totalSpaces: Int = 0,
+    val totalCategories: Int = 0,
+    val totalTags: Int = 0,
+    val totalActivity: Int = 0,
+    val totalTrash: Int = 0,
+    val totalFavorites: Int = 0,
     val storageUsed: String = "0.0 MB",
-    val syncEnabled: Boolean = true
+    val syncEnabled: Boolean = true,
+    val theme: String = "Dark",
+    val language: String = "English",
+    val notificationSettings: Map<String, Boolean> = emptyMap(),
+    val backupFrequency: String = "Daily"
 )
 
 sealed class AuthState {

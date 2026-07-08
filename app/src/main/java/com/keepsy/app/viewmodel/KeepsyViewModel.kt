@@ -11,6 +11,7 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.keepsy.app.repository.BackupManager
 import com.keepsy.app.repository.KeepsyRepository
 import com.keepsy.app.repository.SettingsManager
+import com.keepsy.app.repository.AccountRepository
 import com.keepsy.app.service.FirebaseService
 import com.keepsy.app.sync.FirestoreService
 import com.keepsy.app.sync.SyncManager
@@ -44,6 +45,7 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
     val syncState = syncManager.syncState
 
     private val settingsManager = SettingsManager(application)
+    private val accountRepository = AccountRepository(firebaseService, db.appDao())
     
     private val backupManager = BackupManager(application, db.appDao())
     val monetizationRepository: MonetizationRepository = MonetizationProvider.getRepository(application)
@@ -257,37 +259,57 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
         activeItems, 
         spaces, 
         categories,
-        trashItems
-    ) { items, spacesList, categoriesList, trashItemsList ->
+        trashItems,
+        tags,
+        activityLogs
+    ) { args ->
+        val items = args[0] as List<ItemWithDetails>
+        val spacesList = args[1] as List<Space>
+        val categoriesList = args[2] as List<Category>
+        val trashItemsList = args[3] as List<ItemWithDetails>
+        val tagsList = args[4] as List<Tag>
+        val logsList = args[5] as List<ActivityLog>
+
         val totalCount = items.size
         val spacesCount = spacesList.size
         val categoriesCount = categoriesList.size
         val favoritesCount = items.count { it.item.isFavorite }
         val trashCount = trashItemsList.size
-        Stats(totalCount, spacesCount, categoriesCount, favoritesCount, trashCount)
+        val tgsCount = tagsList.size
+        val actsCount = logsList.size
+        Stats(totalCount, spacesCount, categoriesCount, favoritesCount, trashCount, tgsCount, actsCount)
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
-        Stats(0, 0, 0, 0, 0)
+        Stats(0, 0, 0, 0, 0, 0, 0)
     )
+
+    private val _refreshTrigger = MutableStateFlow(0L)
 
     // Dashboard & Profile Logic
     val userProfile: StateFlow<UserProfile?> = combine(
         authState,
         appStatistics,
-        isStatusChecked
-    ) { auth, stats, checked ->
-        if (auth is AuthState.Authenticated && (checked || stats.totalItems > 0)) {
+        isStatusChecked,
+        _refreshTrigger
+    ) { auth, stats, checked, _ ->
+        if (auth is AuthState.Authenticated) {
             val user = auth.user
             UserProfile(
                 uid = user.uid,
                 name = user.name ?: "Friend",
+                displayName = user.name,
                 email = user.email ?: "",
                 photoUrl = user.photoUrl,
                 memberSince = user.createdAt ?: System.currentTimeMillis(),
                 lastSyncAt = System.currentTimeMillis(),
                 totalItems = stats.totalItems,
                 totalSpaces = stats.totalSpaces,
+                totalCategories = stats.totalCategories,
+                totalTags = stats.tagsCount,
+                totalActivity = stats.activityCount,
+                totalTrash = stats.trashItemsCount,
+                totalFavorites = stats.favoriteItemsCount,
                 storageUsed = "1.2 MB",
                 syncEnabled = true
             )
@@ -742,11 +764,48 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
         return if (trail.isEmpty()) "Unknown Location" else trail.joinToString(" • ") { it.name }
     }
 
+    // Account Actions
+    fun updateProfile(name: String, displayName: String?) {
+        viewModelScope.launch {
+            try {
+                accountRepository.updateProfile(name, displayName)
+                _refreshTrigger.value = System.currentTimeMillis()
+            } catch (e: Exception) {
+                handleError(e)
+            }
+        }
+    }
+
+    fun updateProfilePicture(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val url = accountRepository.uploadProfilePhoto(uri)
+                accountRepository.updateProfile(null, url)
+                _refreshTrigger.value = System.currentTimeMillis()
+            } catch (e: Exception) {
+                handleError(e)
+            }
+        }
+    }
+
+    fun changePassword(current: String, new: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                accountRepository.changePassword(current, new)
+                onSuccess()
+            } catch (e: Exception) {
+                handleError(e)
+            }
+        }
+    }
+
     data class Stats(
         val totalItems: Int,
         val totalSpaces: Int,
         val totalCategories: Int,
         val favoriteItemsCount: Int,
-        val trashItemsCount: Int
+        val trashItemsCount: Int,
+        val tagsCount: Int,
+        val activityCount: Int
     )
 }

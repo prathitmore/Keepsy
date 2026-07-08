@@ -1,7 +1,6 @@
 package com.keepsy.app.ui.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -23,6 +22,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import com.keepsy.app.navigation.SubScreen
 import com.keepsy.app.ui.components.*
 import com.keepsy.app.ui.theme.*
 import com.keepsy.app.viewmodel.KeepsyViewModel
@@ -33,14 +34,15 @@ import java.util.*
 @Composable
 fun ProfileScreen(
     viewModel: KeepsyViewModel,
-    onPop: () -> Unit
+    onPop: () -> Unit,
+    onNavigateToSub: (SubScreen) -> Unit
 ) {
     val profile by viewModel.userProfile.collectAsStateWithLifecycle()
     
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Profile", fontWeight = FontWeight.Bold) },
+                title = { Text("Account Details", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onPop) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -82,14 +84,23 @@ fun ProfileScreen(
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = p.name,
-                                color = Color.White,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.ExtraBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                            if (p.photoUrl != null && p.photoUrl != "") {
+                                AsyncImage(
+                                    model = p.photoUrl,
+                                    contentDescription = "Avatar",
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                val initial = remember(p.name) {
+                                    if (p.name != "") p.name[0].toString() else "U"
+                                }
+                                Text(
+                                    text = initial,
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                            }
                         }
                         
                         Spacer(modifier = Modifier.width(20.dp))
@@ -99,12 +110,16 @@ fun ProfileScreen(
                                 text = p.name,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary
+                                color = TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = p.email,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
+                                color = TextSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Surface(
@@ -121,41 +136,69 @@ fun ProfileScreen(
                             }
                         }
                         
-                        IconButton(
-                            onClick = { /* Edit action */ },
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(CardBackground)
+                        Button(
+                            onClick = { onNavigateToSub(SubScreen.EditProfile) },
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent.copy(alpha = 0.1f))
                         ) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = PrimaryAccent, modifier = Modifier.size(18.dp))
+                            Text("Edit", color = PrimaryAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                     }
                 }
 
-                // Info Section
+                // Stats Section
+                Text("App Statistics", style = MaterialTheme.typography.titleSmall, color = TextSecondary, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    MiniStatCard("Items", p.totalItems.toString(), Icons.Default.Inventory2, Modifier.weight(1f))
+                    MiniStatCard("Spaces", p.totalSpaces.toString(), Icons.Default.Layers, Modifier.weight(1f))
+                    MiniStatCard("Favs", p.totalFavorites.toString(), Icons.Default.Star, Modifier.weight(1f))
+                }
+
+                // Details Card
                 InfoSection(
                     title = "Account Information",
                     items = listOf(
                         InfoItem(Icons.Default.Person, "Full Name", p.name),
                         InfoItem(Icons.Default.Email, "Email", p.email),
                         InfoItem(Icons.Default.CalendarToday, "Member Since", formatDate(p.memberSince)),
-                        InfoItem(Icons.Default.CloudQueue, "Account Type", p.planType)
+                        InfoItem(Icons.Default.Backup, "Sync Enabled", if (p.syncEnabled) "Yes" else "No")
                     )
                 )
 
-                // Stats Section
-                InfoSection(
-                    title = "App Statistics",
-                    items = listOf(
-                        InfoItem(Icons.Default.Inventory2, "Total Items", p.totalItems.toString()),
-                        InfoItem(Icons.Default.Layers, "Total Spaces", p.totalSpaces.toString()),
-                        InfoItem(Icons.Default.SdStorage, "Storage Used", p.storageUsed),
-                        InfoItem(Icons.Default.History, "Last Sync", "Today, 10:18 PM")
-                    )
-                )
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                Button(
+                    onClick = { viewModel.signOut() },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ErrorRed.copy(alpha = 0.1f)),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text("Sign Out", color = ErrorRed, fontWeight = FontWeight.Bold)
+                }
                 
                 Spacer(modifier = Modifier.height(40.dp))
             }
+        }
+    }
+}
+
+@Composable
+fun MiniStatCard(label: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceSecondary),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.03f))
+    ) {
+        Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, contentDescription = null, tint = PrimaryPurple, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+            Text(label, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
         }
     }
 }
@@ -193,7 +236,7 @@ fun InfoSection(title: String, items: List<InfoItem>) {
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(item.label, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, modifier = Modifier.weight(1f))
-                        Text(item.value, style = MaterialTheme.typography.bodyMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(item.value, style = MaterialTheme.typography.bodyMedium, color = TextPrimary, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }

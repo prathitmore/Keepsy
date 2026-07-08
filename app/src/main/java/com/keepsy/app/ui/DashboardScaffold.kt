@@ -35,8 +35,12 @@ import com.keepsy.app.ui.items.AddEditItemScreen
 import com.keepsy.app.ui.items.ItemDetailsScreen
 import com.keepsy.app.ui.items.MoveItemScreen
 import com.keepsy.app.ui.search.SearchScreen
+import com.keepsy.app.ui.settings.BackupSyncScreen
+import com.keepsy.app.ui.settings.EditProfileScreen
 import com.keepsy.app.ui.settings.ProfileScreen
+import com.keepsy.app.ui.settings.SecurityScreen
 import com.keepsy.app.ui.settings.SettingsScreen
+import com.keepsy.app.ui.settings.SubscriptionScreen
 import com.keepsy.app.ui.spaces.AddEditSpaceScreen
 import com.keepsy.app.ui.spaces.SpaceDetailsScreen
 import com.keepsy.app.ui.spaces.SpacesScreen
@@ -61,19 +65,16 @@ fun DashboardScaffold(
     val spacesList by viewModel.spaces.collectAsStateWithLifecycle(emptyList())
     val categoriesList by viewModel.categories.collectAsStateWithLifecycle(emptyList())
 
-    var showAccountMenu by remember { mutableStateOf(false) }
     val profile by viewModel.userProfile.collectAsStateWithLifecycle()
 
-    if (showAccountMenu) {
+    if (currentSubScreen == SubScreen.AccountCenter) {
         AccountBottomSheet(
             profile = profile,
-            onClose = { showAccountMenu = false },
-            onNavigateToProfile = { onNavigateToSub(SubScreen.Profile) },
+            onClose = onPopSub,
+            onNavigateToSub = onNavigateToSub,
             onSignOut = { 
-                showAccountMenu = false
                 viewModel.signOut() 
-            },
-            onNavigateToSettings = { onTabSelected(TabScreen.Settings) }
+            }
         )
     }
 
@@ -94,7 +95,7 @@ fun DashboardScaffold(
                         PremiumTopBar(
                             currentTab = currentTab,
                             profile = profile,
-                            onAccountClick = { showAccountMenu = true }
+                            onAccountClick = { onNavigateToSub(SubScreen.AccountCenter) }
                         )
                     }
                 }
@@ -189,6 +190,23 @@ fun DashboardScaffold(
                                 )
                                 is SubScreen.Profile -> ProfileScreen(
                                     viewModel = viewModel,
+                                    onPop = onPopSub,
+                                    onNavigateToSub = onNavigateToSub
+                                )
+                                SubScreen.EditProfile -> EditProfileScreen(
+                                    viewModel = viewModel,
+                                    onPop = onPopSub
+                                )
+                                SubScreen.BackupSync -> BackupSyncScreen(
+                                    viewModel = viewModel,
+                                    onPop = onPopSub
+                                )
+                                SubScreen.Subscription -> SubscriptionScreen(
+                                    viewModel = viewModel,
+                                    onPop = onPopSub
+                                )
+                                SubScreen.SecurityCenter -> SecurityScreen(
+                                    viewModel = viewModel,
                                     onPop = onPopSub
                                 )
                                 else -> {}
@@ -255,13 +273,25 @@ fun PremiumTopBar(
         ) {
             Box(contentAlignment = Alignment.Center) {
                 if (profile?.photoUrl != null) {
-                    // Profile image if available
-                } else {
+                    // Photo placeholder
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = "Account",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
+                    )
+                } else {
+                    val initials = remember(profile?.name) {
+                        val n = profile?.name ?: "U"
+                        if (n != "") {
+                            n[0].toString()
+                        } else "U"
+                    }
+                    Text(
+                        text = initials,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }

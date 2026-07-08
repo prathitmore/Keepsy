@@ -31,5 +31,10 @@ sealed class SubScreen {
     data class AddEditSpace(val spaceId: Long? = null, val parentSpaceId: Long? = null) : SubScreen()
     data class MoveItem(val itemId: Long) : SubScreen()
     object TrashBin : SubScreen()
+    object AccountCenter : SubScreen()
     object Profile : SubScreen()
+    object EditProfile : SubScreen()
+    object BackupSync : SubScreen()
+    object Subscription : SubScreen()
+    object SecurityCenter : SubScreen()
 }
