@@ -30,6 +30,20 @@ data class User(
     val isEmailVerified: Boolean = false
 )
 
+data class UserProfile(
+    val uid: String,
+    val name: String,
+    val email: String,
+    val photoUrl: String?,
+    val planType: String = "Free Plan",
+    val memberSince: Long,
+    val lastSyncAt: Long?,
+    val totalItems: Int,
+    val totalSpaces: Int,
+    val storageUsed: String = "0.0 MB",
+    val syncEnabled: Boolean = true
+)
+
 sealed class AuthState {
     object Idle : AuthState()
     object Loading : AuthState()

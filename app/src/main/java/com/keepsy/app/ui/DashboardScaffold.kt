@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -34,6 +35,7 @@ import com.keepsy.app.ui.items.AddEditItemScreen
 import com.keepsy.app.ui.items.ItemDetailsScreen
 import com.keepsy.app.ui.items.MoveItemScreen
 import com.keepsy.app.ui.search.SearchScreen
+import com.keepsy.app.ui.settings.ProfileScreen
 import com.keepsy.app.ui.settings.SettingsScreen
 import com.keepsy.app.ui.spaces.AddEditSpaceScreen
 import com.keepsy.app.ui.spaces.SpaceDetailsScreen
@@ -59,6 +61,22 @@ fun DashboardScaffold(
     val spacesList by viewModel.spaces.collectAsStateWithLifecycle(emptyList())
     val categoriesList by viewModel.categories.collectAsStateWithLifecycle(emptyList())
 
+    var showAccountMenu by remember { mutableStateOf(false) }
+    val profile by viewModel.userProfile.collectAsStateWithLifecycle()
+
+    if (showAccountMenu) {
+        AccountBottomSheet(
+            profile = profile,
+            onClose = { showAccountMenu = false },
+            onNavigateToProfile = { onNavigateToSub(SubScreen.Profile) },
+            onSignOut = { 
+                showAccountMenu = false
+                viewModel.signOut() 
+            },
+            onNavigateToSettings = { onTabSelected(TabScreen.Settings) }
+        )
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -73,7 +91,11 @@ fun DashboardScaffold(
                 if (currentSubScreen == SubScreen.None) {
                     Column {
                         SyncIndicator(state = syncStatus)
-                        PremiumTopBar(currentTab = currentTab)
+                        PremiumTopBar(
+                            currentTab = currentTab,
+                            profile = profile,
+                            onAccountClick = { showAccountMenu = true }
+                        )
                     }
                 }
             },
@@ -165,6 +187,10 @@ fun DashboardScaffold(
                                     viewModel = viewModel,
                                     onPop = onPopSub
                                 )
+                                is SubScreen.Profile -> ProfileScreen(
+                                    viewModel = viewModel,
+                                    onPop = onPopSub
+                                )
                                 else -> {}
                             }
                         }
@@ -176,7 +202,11 @@ fun DashboardScaffold(
 }
 
 @Composable
-fun PremiumTopBar(currentTab: TabScreen) {
+fun PremiumTopBar(
+    currentTab: TabScreen,
+    profile: com.keepsy.app.model.UserProfile?,
+    onAccountClick: () -> Unit
+) {
     val title = when (currentTab) {
         TabScreen.Home -> "Dashboard"
         TabScreen.Spaces -> "Inventory Map"
@@ -202,26 +232,38 @@ fun PremiumTopBar(currentTab: TabScreen) {
             )
             if (currentTab == TabScreen.Home) {
                 Text(
-                    text = "Welcome back to Keepsy",
+                    text = if (profile != null) "Welcome back, ${profile.name}" else "Welcome back to Keepsy",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary
+                    color = MaterialTheme.colorScheme.secondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
         
         Surface(
-            modifier = Modifier.size(42.dp),
-            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .size(44.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onAccountClick
+                ),
+            shape = RoundedCornerShape(14.dp),
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Default.PersonOutline,
-                    contentDescription = "Profile",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
+                if (profile?.photoUrl != null) {
+                    // Profile image if available
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Account",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
     }

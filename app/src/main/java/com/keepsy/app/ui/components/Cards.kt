@@ -357,9 +357,9 @@ fun PremiumItemCard(
     Card(
         onClick = onClick,
         modifier = modifier
-            .height(160.dp)
+            .height(180.dp)
             .graphicsLayer(scaleX = scale, scaleY = scale),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(32.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
     ) {
@@ -371,13 +371,13 @@ fun PremiumItemCard(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
-                // Overlay for readability
+                // Premium gradient overlay for text readability
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f))
                             )
                         )
                 )
@@ -395,8 +395,8 @@ fun PremiumItemCard(
                     Icon(
                         imageVector = getSmartItemIconVector(itemDetails.item.name, itemDetails.category?.icon),
                         contentDescription = null,
-                        tint = parseCategoryColor(itemDetails.category?.color).copy(alpha = 0.4f),
-                        modifier = Modifier.size(48.dp)
+                        tint = parseCategoryColor(itemDetails.category?.color).copy(alpha = 0.6f),
+                        modifier = Modifier.size(56.dp)
                     )
                 }
             }
@@ -404,20 +404,36 @@ fun PremiumItemCard(
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(16.dp)
+                    .padding(20.dp)
             ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = itemDetails.category?.name ?: "Other",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
                 Text(
                     text = itemDetails.item.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = if (itemDetails.item.photoPath != null) Color.White else MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                
                 Text(
                     text = itemDetails.space?.name ?: "No location",
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (itemDetails.item.photoPath != null) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.secondary,
+                    color = Color.White.copy(alpha = 0.7f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

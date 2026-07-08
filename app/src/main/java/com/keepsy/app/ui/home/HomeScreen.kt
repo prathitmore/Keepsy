@@ -38,6 +38,7 @@ fun HomeScreen(
     val recentlyAdded by viewModel.recentItems.collectAsStateWithLifecycle()
     val favorites by viewModel.favoriteItems.collectAsStateWithLifecycle()
     val isRestoring by viewModel.isRestoringData.collectAsStateWithLifecycle()
+    val profile by viewModel.userProfile.collectAsStateWithLifecycle()
 
     LazyColumn(
         modifier = Modifier
@@ -51,15 +52,15 @@ fun HomeScreen(
                 modifier = Modifier
                     .padding(horizontal = 24.dp, vertical = 8.dp)
                     .fillMaxWidth()
-                    .height(56.dp)
+                    .height(60.dp)
                     .clip(RoundedCornerShape(20.dp))
                     .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.4f))
-                    .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)), RoundedCornerShape(20.dp))
+                    .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)), RoundedCornerShape(20.dp))
                     .clickable { 
-                        viewModel.updateSearchQuery("") // Clear old search
+                        viewModel.updateSearchQuery("")
                         onTabSelected(TabScreen.Search) 
                     }
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 20.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -69,17 +70,17 @@ fun HomeScreen(
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(22.dp)
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
                     Text(
                         text = "Search items, spaces, or notes...",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                     )
                 }
             }
         }
 
-        // 2. Statistics Overview (With Skeleton)
+        // 2. Statistics Overview
         item {
             Row(
                 modifier = Modifier
@@ -88,8 +89,9 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 if (isRestoring) {
-                    Box(modifier = Modifier.weight(1f).height(110.dp).clip(RoundedCornerShape(24.dp)).shimmerLoadingAnimation())
-                    Box(modifier = Modifier.weight(1f).height(110.dp).clip(RoundedCornerShape(24.dp)).shimmerLoadingAnimation())
+                    repeat(2) {
+                        Box(modifier = Modifier.weight(1f).height(110.dp).clip(RoundedCornerShape(28.dp)).shimmerLoadingAnimation())
+                    }
                 } else {
                     StatCard(
                         title = "Total Items",
@@ -107,7 +109,7 @@ fun HomeScreen(
             }
         }
 
-        // 3. Favorites Section
+        // 3. Favorites Section (Pinned)
         if (favorites.isNotEmpty() || isRestoring) {
             item {
                 SectionHeader(
@@ -126,11 +128,11 @@ fun HomeScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
                         .padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     if (isRestoring) {
                         repeat(3) {
-                            Box(modifier = Modifier.weight(1f).height(160.dp).clip(RoundedCornerShape(24.dp)).shimmerLoadingAnimation())
+                            Box(modifier = Modifier.weight(1f).height(180.dp).clip(RoundedCornerShape(24.dp)).shimmerLoadingAnimation())
                         }
                     } else {
                         favorites.take(3).forEach { itemDetails ->
@@ -172,7 +174,7 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.Inbox,
                             contentDescription = null,
-                            tint = PrimaryPurple,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(32.dp)
                         )
                     },
@@ -211,33 +213,42 @@ fun StatCard(
 
     Card(
         modifier = modifier.height(110.dp),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = if (isLight) 0.6f else 0.1f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(20.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
             Column {
                 Text(
                     text = value,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.ExtraBold
                 )
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.secondary
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    letterSpacing = 0.5.sp
                 )
             }
         }

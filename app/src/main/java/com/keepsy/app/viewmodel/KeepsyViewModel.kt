@@ -271,6 +271,29 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
         Stats(0, 0, 0, 0, 0)
     )
 
+    // Dashboard & Profile Logic
+    val userProfile: StateFlow<UserProfile?> = combine(
+        authState,
+        appStatistics,
+        isStatusChecked
+    ) { auth, stats, checked ->
+        if (auth is AuthState.Authenticated && (checked || stats.totalItems > 0)) {
+            val user = auth.user
+            UserProfile(
+                uid = user.uid,
+                name = user.name ?: "Friend",
+                email = user.email ?: "",
+                photoUrl = user.photoUrl,
+                memberSince = user.createdAt ?: System.currentTimeMillis(),
+                lastSyncAt = System.currentTimeMillis(),
+                totalItems = stats.totalItems,
+                totalSpaces = stats.totalSpaces,
+                storageUsed = "1.2 MB",
+                syncEnabled = true
+            )
+        } else null
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     // Reactive Instant Search (sub-100ms)
     val searchResults: StateFlow<SearchResult> = combine(
         searchQuery,
