@@ -10,12 +10,13 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.GoogleAuthProvider
 import com.keepsy.app.R
 import com.keepsy.app.viewmodel.KeepsyViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 class AuthManager(private val context: Context) {
 
-    private val credentialManager = CredentialManager.create(context)
+    private val credentialManager = CredentialManager.create(context.applicationContext)
     private val TAG = "KeepsyAuth"
 
     fun signInWithGoogle(
@@ -40,7 +41,7 @@ class AuthManager(private val context: Context) {
             .addCredentialOption(googleIdOption)
             .build()
 
-        coroutineScope.launch {
+        viewModel.viewModelScope.launch {
             try {
                 Log.i(TAG, "signInWithGoogle: Launching Credential Manager")
                 val result = credentialManager.getCredential(
@@ -59,7 +60,10 @@ class AuthManager(private val context: Context) {
                 }
             } catch (e: GetCredentialException) {
                 Log.e(TAG, "signInWithGoogle: Credential Manager Error: ${e.message}")
-                viewModel.handleExternalError(e)
+                val isTechnical = e.message?.contains("coroutine scope", ignoreCase = true) == true
+                if (!isTechnical) {
+                    viewModel.handleExternalError(e)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "signInWithGoogle: Unexpected error", e)
                 viewModel.handleExternalError(e)

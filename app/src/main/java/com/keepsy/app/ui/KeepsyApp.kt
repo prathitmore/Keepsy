@@ -128,8 +128,13 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
     val errorState by viewModel.errorState.collectAsStateWithLifecycle()
 
     LaunchedEffect(errorState) {
-        errorState?.let { error ->
-            snackbarHostState.showSnackbar(error.message)
+        val error = errorState
+        if (error != null) {
+            val msg = error.message
+            // Filter out technical lifecycle errors from being shown to users
+            if (msg != "" && msg != "The coroutine scope left the composition") {
+                snackbarHostState.showSnackbar(msg)
+            }
             viewModel.clearError()
         }
     }

@@ -404,10 +404,12 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
     fun completeOnboarding(spaceName: String, itemName: String?) {
         viewModelScope.launch {
             try {
-                // 1. Mark onboarding as done locally and on cloud
+                // 1. Mark onboarding as done locally and on cloud IMMEDIATELY
                 settingsManager.setOnboardingCompleted(true)
+                
                 val data = HashMap<String, Any>()
                 data["onboardingCompleted"] = true
+                data["lastOnboarded"] = System.currentTimeMillis()
                 firestoreService.updateProfile(data)
 
                 // 2. Create the first space

@@ -48,11 +48,23 @@ class SyncRepository(
     suspend fun isUserAlreadyExistsOnCloud(): Boolean = withContext(Dispatchers.IO) {
         if (auth.currentUser == null) return@withContext false
         try {
+            // 1. Check Profile
             val profile = firestoreService.getProfile()
-            if (profile != null) return@withContext true
+            if (profile != null && (profile["onboardingCompleted"] as? Boolean == true)) return@withContext true
             
+            // 2. Check Spaces Collection
             val spaces = firestoreService.getAllEntities("spaces")
-            spaces.isNotEmpty()
+            if (spaces.isNotEmpty()) return@withContext true
+            
+            // 3. Check Items Collection
+            val items = firestoreService.getAllEntities("items")
+            if (items.isNotEmpty()) return@withContext true
+            
+            // 4. Check Activity Logs
+            val logs = firestoreService.getAllEntities("activityLogs")
+            if (logs.isNotEmpty()) return@withContext true
+            
+            false
         } catch (e: Exception) {
             KeepsyLogger.e("Error checking cloud user existence", e)
             false
