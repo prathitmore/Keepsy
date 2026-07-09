@@ -291,17 +291,18 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
         authState,
         appStatistics,
         isStatusChecked,
-        _refreshTrigger
-    ) { auth, stats, checked, _ ->
+        firebaseService.getProfileFlow()
+    ) { auth, stats, checked, doc ->
         if (auth is AuthState.Authenticated) {
             val user = auth.user
+            
             UserProfile(
                 uid = user.uid,
-                name = user.name ?: "Friend",
-                displayName = user.name ?: "Friend", // Fallback to name if display name missing
+                name = (doc?.get("name") as? String) ?: user.name ?: "Friend",
+                displayName = (doc?.get("displayName") as? String) ?: user.name ?: "Friend",
                 email = user.email ?: "",
-                photoUrl = user.photoUrl,
-                memberSince = user.createdAt ?: System.currentTimeMillis(),
+                photoUrl = (doc?.get("photoUrl") as? String) ?: user.photoUrl,
+                memberSince = (doc?.get("createdAt") as? Long) ?: user.createdAt ?: System.currentTimeMillis(),
                 lastSyncAt = System.currentTimeMillis(),
                 totalItems = stats.totalItems,
                 totalSpaces = stats.totalSpaces,
@@ -768,7 +769,9 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
     fun updateProfile(name: String, displayName: String?) {
         viewModelScope.launch {
             try {
-                accountRepository.updateProfile(name, displayName, null)
+                // Ensure both name and displayName are updated in Firestore
+                val dName = displayName ?: name
+                accountRepository.updateProfile(name, dName, null)
                 repository.refreshAuthState()
                 _refreshTrigger.value = System.currentTimeMillis()
             } catch (e: Exception) {
