@@ -52,20 +52,21 @@ class AuthManager(private val context: Context) {
                 val credential = result.credential
                 Log.d(TAG, "Received credential type: ${credential.type}")
                 
-                if (credential is GoogleIdTokenCredential) {
-                    Log.i(TAG, "signInWithGoogle: ID Token received")
-                    val firebaseCredential = GoogleAuthProvider.getCredential(credential.idToken, null)
+                // Use type-string comparison for better reliability across SDK versions
+                if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                    val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                    Log.i(TAG, "signInWithGoogle: ID Token successfully extracted")
+                    val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
                     viewModel.signInWithCredential(firebaseCredential)
                 } else {
                     Log.e(TAG, "signInWithGoogle: Unexpected credential type: ${credential.type}")
-                    // Improved error message to help diagnose configuration issues
-                    viewModel.handleExternalError(Exception("Google Auth mismatch (type: ${credential.type}). Please verify SHA-1 and Web Client ID in Firebase Console."))
+                    viewModel.handleExternalError(Exception("Authentication failed: Unsupported credential type (${credential.type})."))
                 }
             } catch (e: GetCredentialException) {
                 Log.e(TAG, "signInWithGoogle: Credential Manager Error: ${e.message}")
-                // Often 'invalid response' comes from here if SHA-1 is missing
                 val msg = e.message ?: "Unknown credential error"
-                viewModel.handleExternalError(Exception("Authentication failed: $msg"))
+                // Often 'developer error' or 'invalid response' means SHA-1 mismatch
+                viewModel.handleExternalError(Exception("Authentication failed: $msg. Ensure SHA-1 is added to Firebase."))
             } catch (e: Exception) {
                 Log.e(TAG, "signInWithGoogle: Unexpected error", e)
                 viewModel.handleExternalError(e)
