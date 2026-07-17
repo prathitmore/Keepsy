@@ -25,11 +25,7 @@ class AuthManager(private val context: Context) {
     ) {
         val webClientId: String = context.getString(R.string.default_web_client_id)
         
-        if (webClientId.contains("YOUR_WEB_CLIENT_ID", ignoreCase = true)) {
-            Log.e(TAG, "signInWithGoogle: Web Client ID not configured in strings.xml")
-            viewModel.handleExternalError(Exception("Google Sign-In is not configured yet. Please check the documentation."))
-            return
-        }
+        Log.d(TAG, "signInWithGoogle: Using Web Client ID: $webClientId")
 
         val googleIdOption = GetGoogleIdOption.Builder()
             .setFilterByAuthorizedAccounts(false)
@@ -43,32 +39,37 @@ class AuthManager(private val context: Context) {
 
         viewModel.viewModelScope.launch {
             try {
-                Log.i(TAG, "signInWithGoogle: Launching Credential Manager")
+                Log.i(TAG, "signInWithGoogle: Requesting Google Credentials...")
                 val result = credentialManager.getCredential(
                     context = context,
                     request = request
                 )
                 
                 val credential = result.credential
-                Log.d(TAG, "Received credential type: ${credential.type}")
+                Log.d(TAG, "Credential Type received: ${credential.type}")
                 
-                // Use type-string comparison for better reliability across SDK versions
-                if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                // FIX: Use hardcoded string comparison to bypass potential SDK class-casting issues
+                if (credential.type == "com.google.android.libraries.identity.googleid.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL") {
                     val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                    Log.i(TAG, "signInWithGoogle: ID Token successfully extracted")
                     val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
+                    
+                    Log.i(TAG, "Google ID Token successfully parsed. Proceeding to Firebase login.")
                     viewModel.signInWithCredential(firebaseCredential)
                 } else {
-                    Log.e(TAG, "signInWithGoogle: Unexpected credential type: ${credential.type}")
-                    viewModel.handleExternalError(Exception("Authentication failed: Unsupported credential type (${credential.type})."))
+                    Log.e(TAG, "Unsupported credential type: ${credential.type}")
+                    viewModel.handleExternalError(Exception("Authentication failed: Unrecognized login type (${credential.type})"))
                 }
             } catch (e: GetCredentialException) {
-                Log.e(TAG, "signInWithGoogle: Credential Manager Error: ${e.message}")
-                val msg = e.message ?: "Unknown credential error"
-                // Often 'developer error' or 'invalid response' means SHA-1 mismatch
-                viewModel.handleExternalError(Exception("Authentication failed: $msg. Ensure SHA-1 is added to Firebase."))
+                Log.e(TAG, "Credential Manager Error: ${e.message}")
+                val userMsg = when {
+                    e.message?.contains("7:") == true -> "Google Play Services error. Please check your internet and Google account."
+                    e.message?.contains("10:") == true -> "Developer error: SHA-1 or Web Client ID mismatch. Please verify Firebase Console."
+                    e.message?.contains("cancel") == true -> "Sign-in was cancelled."
+                    else -> e.message ?: "Authentication failed"
+                }
+                viewModel.handleExternalError(Exception(userMsg))
             } catch (e: Exception) {
-                Log.e(TAG, "signInWithGoogle: Unexpected error", e)
+                Log.e(TAG, "Unexpected login error", e)
                 viewModel.handleExternalError(e)
             }
         }
