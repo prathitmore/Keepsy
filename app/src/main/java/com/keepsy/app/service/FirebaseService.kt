@@ -12,8 +12,10 @@ import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageMetadata
 import com.keepsy.app.model.User
 import com.keepsy.app.utils.KeepsyLogger
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.tasks.await
 import java.util.HashMap
 
@@ -36,16 +38,6 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
                 isEmailVerified = it.isEmailVerified,
                 createdAt = it.metadata?.creationTimestamp
             )
-        }
-    }
-
-    suspend fun getProfileDocument(): Map<String, Any?>? {
-        val uid = auth.currentUser?.uid ?: return null
-        return try {
-            firestore.collection("users").document(uid).get().await().data
-        } catch (e: Exception) {
-            KeepsyLogger.w("Failed to get profile doc: ${e.message}")
-            null
         }
     }
 
@@ -205,13 +197,12 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
     private suspend fun updateUserProfile(user: User, isNewUser: Boolean = false) {
         try {
             val userRef = firestore.collection("users").document(user.uid)
-            
             val updates = HashMap<String, Any?>()
             updates["uid"] = user.uid
             updates["email"] = user.email
             updates["lastLogin"] = System.currentTimeMillis()
             updates["platform"] = "Android"
-            updates["appVersion"] = "1.2"
+            updates["appVersion"] = "1.2.2"
 
             if (isNewUser) {
                 updates["createdAt"] = user.createdAt ?: System.currentTimeMillis()
@@ -228,19 +219,29 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         }
     }
 
-    fun getProfileFlow(): kotlinx.coroutines.flow.Flow<Map<String, Any?>?> {
-        val uid = auth.currentUser?.uid ?: return kotlinx.coroutines.flow.flowOf(null)
-        return kotlinx.coroutines.flow.callbackFlow {
-            val listener = firestore.collection("users").document(uid)
-                .addSnapshotListener { snapshot, error ->
-                    if (error != null) {
-                        close(error)
-                        return@addSnapshotListener
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun getProfileFlow(): Flow<Map<String, Any?>?> {
+        return authStateFlow().flatMapLatest { u ->
+            if (u == null) flowOf(null)
+            else callbackFlow {
+                val listener = firestore.collection("users").document(u.uid)
+                    .addSnapshotListener { snapshot, error ->
+                        if (error != null) {
+                            close(error)
+                            return@addSnapshotListener
+                        }
+                        trySend(snapshot?.data)
                     }
-                    trySend(snapshot?.data)
-                }
-            awaitClose { listener.remove() }
+                awaitClose { listener.remove() }
+            }
         }
+    }
+    
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun authStateFlow(): Flow<com.google.firebase.auth.FirebaseUser?> = callbackFlow {
+        val listener = FirebaseAuth.AuthStateListener { trySend(it.currentUser) }
+        auth.addAuthStateListener(listener)
+        awaitClose { auth.removeAuthStateListener(listener) }
     }
 
     fun signOut() = auth.signOut()
