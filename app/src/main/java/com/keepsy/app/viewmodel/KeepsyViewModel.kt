@@ -40,7 +40,7 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
     
     // Sync components
     private val firestoreService = FirestoreService()
-    private val syncRepository = SyncRepository(db.appDao(), firestoreService)
+    private val syncRepository = SyncRepository(db.appDao(), firestoreService, firebaseService)
     val syncManager = SyncManager(application, syncRepository)
     val syncState = syncManager.syncState
 

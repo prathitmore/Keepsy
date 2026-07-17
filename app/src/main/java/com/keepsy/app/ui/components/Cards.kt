@@ -133,9 +133,17 @@ fun ItemRowCard(itemDetails: ItemWithDetails, onClick: () -> Unit) {
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (itemDetails.item.photoPath != null && File(itemDetails.item.photoPath).exists()) {
+            val photoModel = remember(itemDetails.item.photoPath, itemDetails.item.photoUrl) {
+                if (itemDetails.item.photoPath != null && File(itemDetails.item.photoPath).exists()) {
+                    File(itemDetails.item.photoPath)
+                } else {
+                    itemDetails.item.photoUrl
+                }
+            }
+
+            if (photoModel != null) {
                 AsyncImage(
-                    model = File(itemDetails.item.photoPath),
+                    model = photoModel,
                     contentDescription = itemDetails.item.name,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
@@ -364,9 +372,17 @@ fun PremiumItemCard(
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            if (itemDetails.item.photoPath != null && File(itemDetails.item.photoPath).exists()) {
+            val photoModel = remember(itemDetails.item.photoPath, itemDetails.item.photoUrl) {
+                if (itemDetails.item.photoPath != null && File(itemDetails.item.photoPath).exists()) {
+                    File(itemDetails.item.photoPath)
+                } else {
+                    itemDetails.item.photoUrl
+                }
+            }
+
+            if (photoModel != null) {
                 AsyncImage(
-                    model = File(itemDetails.item.photoPath),
+                    model = photoModel,
                     contentDescription = itemDetails.item.name,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()

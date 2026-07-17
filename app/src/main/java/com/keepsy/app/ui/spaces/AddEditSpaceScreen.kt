@@ -57,6 +57,8 @@ fun AddEditSpaceScreen(
     var isFavorite by remember { mutableStateOf(false) }
     var selectedParentId by remember { mutableStateOf(parentSpaceId) }
     var photoUri by remember { mutableStateOf<Uri?>(null) }
+    var existingPhotoPath by remember { mutableStateOf<String?>(null) }
+    var existingPhotoUrl by remember { mutableStateOf<String?>(null) }
 
     var showParentDrop by remember { mutableStateOf(false) }
 
@@ -86,6 +88,8 @@ fun AddEditSpaceScreen(
                 icon = space.icon ?: "home"
                 isFavorite = space.isFavorite
                 selectedParentId = space.parentSpaceId
+                existingPhotoPath = space.photoPath
+                existingPhotoUrl = space.photoUrl
             }
         }
     }
@@ -142,18 +146,28 @@ fun AddEditSpaceScreen(
                             .background(PrimaryAccent.copy(alpha = 0.05f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (photoUri != null) {
+                        val photoModel = remember(photoUri, existingPhotoPath, existingPhotoUrl) {
+                            if (photoUri != null) {
+                                photoUri
+                            } else if (existingPhotoPath != null && File(existingPhotoPath!!).exists()) {
+                                File(existingPhotoPath!!)
+                            } else {
+                                existingPhotoUrl
+                            }
+                        }
+
+                        if (photoModel != null) {
                             AsyncImage(
-                                model = photoUri, 
-                                contentDescription = null, 
-                                contentScale = ContentScale.Crop, 
+                                model = photoModel,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
                             Icon(
-                                imageVector = Icons.Default.AddAPhoto, 
-                                contentDescription = null, 
-                                tint = PrimaryAccent, 
+                                imageVector = Icons.Default.AddAPhoto,
+                                contentDescription = null,
+                                tint = PrimaryAccent,
                                 modifier = Modifier.size(32.dp)
                             )
                         }
@@ -193,9 +207,13 @@ fun AddEditSpaceScreen(
                                 modifier = Modifier.weight(1f).height(40.dp)
                             )
                         }
-                        if (photoUri != null) {
+                        if (photoUri != null || existingPhotoPath != null || existingPhotoUrl != null) {
                             TextButton(
-                                onClick = { photoUri = null },
+                                onClick = { 
+                                    photoUri = null 
+                                    existingPhotoPath = null
+                                    existingPhotoUrl = null
+                                },
                                 colors = ButtonDefaults.textButtonColors(contentColor = ErrorRed)
                             ) {
                                 Text("Remove Photo", style = MaterialTheme.typography.labelSmall)

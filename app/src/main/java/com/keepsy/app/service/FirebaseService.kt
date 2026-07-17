@@ -80,9 +80,17 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
     }
 
     suspend fun uploadProfilePicture(uri: Uri): String {
+        return uploadImage(uri, "profile", "avatar")
+    }
+
+    suspend fun uploadEntityImage(uri: Uri, collection: String, entityName: String): String {
+        return uploadImage(uri, collection, entityName)
+    }
+
+    private suspend fun uploadImage(uri: Uri, folder: String, prefix: String): String {
         val uid = auth.currentUser?.uid ?: throw Exception("No user authenticated")
         val timestamp = System.currentTimeMillis()
-        val storagePath = "users/$uid/profile/avatar_$timestamp.jpg"
+        val storagePath = "users/$uid/$folder/${prefix}_$timestamp.jpg"
         val ref = storage.reference.child(storagePath)
         
         try {

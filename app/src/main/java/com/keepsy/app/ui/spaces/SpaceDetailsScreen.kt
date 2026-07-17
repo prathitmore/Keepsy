@@ -87,9 +87,17 @@ fun SpaceDetailsScreen(
                             .height(180.dp)
                             .clip(RoundedCornerShape(12.dp))
                     ) {
-                        if (details.space.photoPath != null && File(details.space.photoPath).exists()) {
+                        val photoModel = remember(details.space.photoPath, details.space.photoUrl) {
+                            if (details.space.photoPath != null && File(details.space.photoPath).exists()) {
+                                File(details.space.photoPath)
+                            } else {
+                                details.space.photoUrl
+                            }
+                        }
+
+                        if (photoModel != null) {
                             AsyncImage(
-                                model = File(details.space.photoPath),
+                                model = photoModel,
                                 contentDescription = details.space.name,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()

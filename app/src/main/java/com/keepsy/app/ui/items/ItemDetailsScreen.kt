@@ -102,9 +102,17 @@ fun ItemDetailsScreen(
                         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
-                            if (details.item.photoPath != null && File(details.item.photoPath).exists()) {
+                            val photoModel = remember(details.item.photoPath, details.item.photoUrl) {
+                                if (details.item.photoPath != null && File(details.item.photoPath).exists()) {
+                                    File(details.item.photoPath)
+                                } else {
+                                    details.item.photoUrl
+                                }
+                            }
+
+                            if (photoModel != null) {
                                 AsyncImage(
-                                    model = File(details.item.photoPath),
+                                    model = photoModel,
                                     contentDescription = details.item.name,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()

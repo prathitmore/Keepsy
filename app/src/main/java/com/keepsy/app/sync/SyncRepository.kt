@@ -3,14 +3,18 @@ package com.keepsy.app.sync
 import com.google.firebase.auth.FirebaseAuth
 import com.keepsy.app.database.AppDao
 import com.keepsy.app.model.*
+import com.keepsy.app.service.FirebaseService
+import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.first
 import com.keepsy.app.utils.KeepsyLogger
+import java.io.File
 
 class SyncRepository(
     private val appDao: AppDao,
-    private val firestoreService: FirestoreService
+    private val firestoreService: FirestoreService,
+    private val firebaseService: FirebaseService
 ) {
     private val TAG = "KeepsySync"
     private val auth = FirebaseAuth.getInstance()
@@ -88,9 +92,30 @@ class SyncRepository(
         try {
             val dirtySpaces = appDao.getDirtySpaces()
             for (space in dirtySpaces) {
+                var currentSpace = space
                 val rId = space.remoteId ?: java.util.UUID.randomUUID().toString()
-                firestoreService.uploadEntity("spaces", rId, space.toMap())
-                appDao.markSpaceSynced(space.spaceId, rId, "SYNCED", System.currentTimeMillis())
+                
+                // Upload image if exists locally but not on cloud
+                if (space.photoPath != null && space.photoUrl == null) {
+                    val file = File(space.photoPath)
+                    if (file.exists()) {
+                        try {
+                            val url = firebaseService.uploadEntityImage(Uri.fromFile(file), "spaces", "space_${space.name}")
+                            currentSpace = space.copy(photoUrl = url)
+                        } catch (e: Exception) {
+                            KeepsyLogger.e("Image upload failed for space ${space.name}", e)
+                        }
+                    }
+                }
+                
+                firestoreService.uploadEntity("spaces", rId, currentSpace.toMap())
+                
+                // Save the synced state including any new photoUrl
+                appDao.updateSpace(currentSpace.copy(
+                    remoteId = rId,
+                    syncState = "SYNCED",
+                    lastSynced = System.currentTimeMillis()
+                ))
             }
         } catch (e: Exception) {
             KeepsyLogger.e("Error uploading spaces", e)
@@ -100,9 +125,30 @@ class SyncRepository(
         try {
             val dirtyItems = appDao.getDirtyItems()
             for (item in dirtyItems) {
+                var currentItem = item
                 val rId = item.remoteId ?: java.util.UUID.randomUUID().toString()
-                firestoreService.uploadEntity("items", rId, item.toMap())
-                appDao.markItemSynced(item.itemId, rId, "SYNCED", System.currentTimeMillis())
+
+                // Upload image if exists locally but not on cloud
+                if (item.photoPath != null && item.photoUrl == null) {
+                    val file = File(item.photoPath)
+                    if (file.exists()) {
+                        try {
+                            val url = firebaseService.uploadEntityImage(Uri.fromFile(file), "items", "item_${item.name}")
+                            currentItem = item.copy(photoUrl = url)
+                        } catch (e: Exception) {
+                            KeepsyLogger.e("Image upload failed for item ${item.name}", e)
+                        }
+                    }
+                }
+
+                firestoreService.uploadEntity("items", rId, currentItem.toMap())
+                
+                // Save the synced state including any new photoUrl
+                appDao.updateItem(currentItem.copy(
+                    remoteId = rId,
+                    syncState = "SYNCED",
+                    lastSynced = System.currentTimeMillis()
+                ))
             }
         } catch (e: Exception) {
             KeepsyLogger.e("Error uploading items", e)
@@ -161,7 +207,8 @@ class SyncRepository(
                 } else if (remoteEntity.updatedAt > localEntity.updatedAt) {
                     appDao.updateSpace(remoteEntity.copy(
                         spaceId = localEntity.spaceId,
-                        parentSpaceId = localEntity.parentSpaceId 
+                        parentSpaceId = localEntity.parentSpaceId,
+                        photoPath = localEntity.photoPath // Preserve local path
                     ))
                 }
             }
@@ -185,7 +232,8 @@ class SyncRepository(
                     appDao.updateItem(remoteEntity.copy(
                         itemId = localEntity.itemId,
                         spaceId = localEntity.spaceId,
-                        categoryId = localEntity.categoryId
+                        categoryId = localEntity.categoryId,
+                        photoPath = localEntity.photoPath // Preserve local path
                     ))
                 }
             }

@@ -17,7 +17,9 @@ class SyncWorker(
         
         val database = AppDatabase.getDatabase(applicationContext)
         val firestoreService = FirestoreService()
-        val repository = SyncRepository(database.appDao(), firestoreService)
+        val analytics = com.google.firebase.analytics.FirebaseAnalytics.getInstance(applicationContext)
+        val firebaseService = FirebaseService(analytics)
+        val repository = SyncRepository(database.appDao(), firestoreService, firebaseService)
         
         return try {
             repository.fullSync()
