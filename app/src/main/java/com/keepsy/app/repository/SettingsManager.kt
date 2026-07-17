@@ -114,6 +114,7 @@ class SettingsManager(private val context: Context) {
             prefs.edit().clear().apply()
             _isOnboardingCompleted.value = false
             _localProfileCache.value = LocalProfileData()
+            KeepsyLogger.i("SettingsManager: Secure preferences wiped")
         } catch (e: Exception) {
             KeepsyLogger.e("Failed to reset settings", e)
         }

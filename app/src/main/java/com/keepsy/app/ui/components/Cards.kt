@@ -93,7 +93,7 @@ fun SpaceHorizontalCard(space: Space, onClick: () -> Unit) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = space.name,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -101,7 +101,7 @@ fun SpaceHorizontalCard(space: Space, onClick: () -> Unit) {
                 )
                 Text(
                     text = if (space.parentSpaceId != null) "Sub-space" else "Primary location",
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.85f)
                 )
             }
@@ -176,7 +176,7 @@ fun ItemRowCard(itemDetails: ItemWithDetails, onClick: () -> Unit) {
             ) {
                 Text(
                     text = itemDetails.item.name,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -295,7 +295,7 @@ fun SpaceTreeNode(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = space.name,
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
@@ -304,7 +304,7 @@ fun SpaceTreeNode(
                     if (space.description != null && space.description != "") {
                         Text(
                             text = space.description,
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis

@@ -253,7 +253,7 @@ fun PremiumTopBar(
             if (currentTab == TabScreen.Home) {
                 Text(
                     text = if (profile != null) "Welcome back, ${profile.displayName}" else "Welcome back to Keepsy",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.secondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

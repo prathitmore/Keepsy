@@ -297,10 +297,7 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
         if (auth is AuthState.Authenticated) {
             val user = auth.user
             
-            // PRIORITY: 
-            // 1. Local Cache (Most recent, instant)
-            // 2. Firestore data (Persistent, synced)
-            // 3. Auth data (Session fallback)
+            // Enterprise logic: Prioritize local cache for instant UI, merge with cloud
             val nameValue = local.name ?: (doc?.get("name") as? String) ?: user.name ?: "Friend"
             val displayNameValue = local.displayName ?: (doc?.get("displayName") as? String) ?: nameValue
             val photoValue = local.photoPath ?: (doc?.get("photoUrl") as? String) ?: user.photoUrl
@@ -390,6 +387,8 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
                         if (currentUid != lastCheckedUid || !isStatusChecked.value) {
                             checkOnboardingStatus()
                         }
+                        // Always trigger a manual sync on successful login
+                        manualSync()
                     } else if (auth is AuthState.Unauthenticated) {
                         _isStatusChecked.value = false
                     }

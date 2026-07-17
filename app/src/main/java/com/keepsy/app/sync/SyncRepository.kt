@@ -205,11 +205,15 @@ class SyncRepository(
                 if (localEntity == null) {
                     appDao.insertSpace(remoteEntity.copy(parentSpaceId = null))
                 } else if (remoteEntity.updatedAt > localEntity.updatedAt) {
+                    // Update metadata but preserve local image path if cloud doesn't have a newer one
                     appDao.updateSpace(remoteEntity.copy(
                         spaceId = localEntity.spaceId,
                         parentSpaceId = localEntity.parentSpaceId,
-                        photoPath = localEntity.photoPath // Preserve local path
+                        photoPath = localEntity.photoPath 
                     ))
+                } else if (localEntity.photoUrl == null && remoteEntity.photoUrl != null) {
+                    // Specific case: local is newer but missing cloud link, pull link only
+                    appDao.updateSpace(localEntity.copy(photoUrl = remoteEntity.photoUrl))
                 }
             }
         } catch (e: Exception) {
@@ -225,16 +229,16 @@ class SyncRepository(
                 val localEntity = appDao.getItemByRemoteId(remoteId)
                 
                 if (localEntity == null) {
-                    // Items MUST have valid space and category IDs to avoid crashes or being hidden
-                    // We set them to 0 and resolve later, but if resolve fails they remain 0
                     appDao.insertItem(remoteEntity.copy(spaceId = 0L, categoryId = 0L))
                 } else if (remoteEntity.updatedAt > localEntity.updatedAt) {
                     appDao.updateItem(remoteEntity.copy(
                         itemId = localEntity.itemId,
                         spaceId = localEntity.spaceId,
                         categoryId = localEntity.categoryId,
-                        photoPath = localEntity.photoPath // Preserve local path
+                        photoPath = localEntity.photoPath
                     ))
+                } else if (localEntity.photoUrl == null && remoteEntity.photoUrl != null) {
+                    appDao.updateItem(localEntity.copy(photoUrl = remoteEntity.photoUrl))
                 }
             }
         } catch (e: Exception) {

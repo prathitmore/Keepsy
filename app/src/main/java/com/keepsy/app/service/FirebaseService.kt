@@ -202,11 +202,15 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
     private suspend fun updateUserProfile(user: User, isNewUser: Boolean = false) {
         try {
             val userRef = firestore.collection("users").document(user.uid)
+            
+            // SECURITY: Only update session metadata on login.
+            // We do NOT overwrite profile data (name, photo) from Auth if they already exist in Firestore.
             val updates = HashMap<String, Any?>()
             updates["uid"] = user.uid
             updates["email"] = user.email
             updates["lastLogin"] = System.currentTimeMillis()
             updates["platform"] = "Android"
+            updates["appVersion"] = "1.2.6"
 
             if (isNewUser) {
                 updates["createdAt"] = user.createdAt ?: System.currentTimeMillis()
@@ -218,6 +222,7 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
             userRef.set(updates, SetOptions.merge()).await()
             crashlytics.setUserId(user.uid)
             user.email?.let { crashlytics.setCustomKey("email", it) }
+            KeepsyLogger.d("FirebaseService: Firestore session metadata updated")
         } catch (e: Exception) {
             KeepsyLogger.w("FirebaseService: Metadata sync failed")
         }
