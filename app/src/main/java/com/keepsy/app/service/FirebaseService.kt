@@ -1,7 +1,6 @@
 package com.keepsy.app.service
 
 import android.net.Uri
-import android.os.Bundle
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseAuth
@@ -11,7 +10,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageMetadata
-import com.google.firebase.storage.StorageReference
 import com.keepsy.app.model.User
 import com.keepsy.app.utils.KeepsyLogger
 import kotlinx.coroutines.channels.awaitClose
@@ -38,6 +36,16 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
                 isEmailVerified = it.isEmailVerified,
                 createdAt = it.metadata?.creationTimestamp
             )
+        }
+    }
+
+    suspend fun getProfileDocument(): Map<String, Any?>? {
+        val uid = auth.currentUser?.uid ?: return null
+        return try {
+            firestore.collection("users").document(uid).get().await().data
+        } catch (e: Exception) {
+            KeepsyLogger.w("Failed to get profile doc: ${e.message}")
+            null
         }
     }
 
@@ -101,37 +109,17 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
             KeepsyLogger.i("Uploading image bytes: ${bytes.size}")
             ref.putBytes(bytes, metadata).await()
             
-            // Significant indexing delay
-            delay(2500)
+            delay(1500)
             
             var downloadUrl: String? = null
-            var lastError: Exception? = null
-            
-            for (attempt in 1..6) {
-                try {
-                    downloadUrl = ref.downloadUrl.await().toString()
-                    if (downloadUrl != null) break
-                } catch (e: Exception) {
-                    lastError = e
-                    KeepsyLogger.w("Download URL attempt $attempt failed")
-                    delay(2000L * attempt)
-                }
+            try {
+                downloadUrl = ref.downloadUrl.await().toString()
+            } catch (e: Exception) {
+                delay(2000)
+                downloadUrl = ref.downloadUrl.await().toString()
             }
             
-            val finalUrl = downloadUrl ?: throw lastError ?: Exception("Could not retrieve URL")
-            
-            // Background cleanup of old versions
-            storage.reference.child("users/$uid/profile/").listAll().addOnSuccessListener { res ->
-                val items = res.items
-                for (i in 0 until items.size) {
-                    val item: StorageReference = items[i]
-                    if (item.name != "avatar_$timestamp.jpg") {
-                        item.delete()
-                    }
-                }
-            }
-            
-            return finalUrl
+            return downloadUrl ?: throw Exception("Could not retrieve public URL")
         } catch (e: Exception) {
             KeepsyLogger.e("uploadProfilePicture pipeline failed", e)
             throw e
@@ -143,12 +131,9 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         updateProfile(null, null, "")
         try {
             val folderRef = storage.reference.child("users/$uid/profile/")
-            folderRef.listAll().addOnSuccessListener { res ->
-                val items = res.items
-                for (i in 0 until items.size) {
-                    val item: StorageReference = items[i]
-                    item.delete()
-                }
+            val listResult = folderRef.listAll().await()
+            for (item in listResult.items) {
+                item.delete().await()
             }
         } catch (e: Exception) {
             KeepsyLogger.w("Storage cleanup failed")
@@ -166,14 +151,14 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
 
     suspend fun signInWithEmail(email: String, password: String): User {
         val result = auth.signInWithEmailAndPassword(email, password).await()
-        val firebaseUser = result.user ?: throw Exception("Login failed")
+        val u = result.user ?: throw Exception("Login failed")
         val user = User(
-            uid = firebaseUser.uid,
-            name = firebaseUser.displayName,
-            email = firebaseUser.email,
-            photoUrl = firebaseUser.photoUrl?.toString(),
-            isAnonymous = firebaseUser.isAnonymous,
-            isEmailVerified = firebaseUser.isEmailVerified
+            uid = u.uid,
+            name = u.displayName,
+            email = u.email,
+            photoUrl = u.photoUrl?.toString(),
+            isAnonymous = u.isAnonymous,
+            isEmailVerified = u.isEmailVerified
         )
         updateUserProfile(user)
         return user
@@ -181,20 +166,20 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
 
     suspend fun signUpWithEmail(email: String, password: String, name: String): User {
         val result = auth.createUserWithEmailAndPassword(email, password).await()
-        val firebaseUser = result.user ?: throw Exception("Registration failed")
+        val u = result.user ?: throw Exception("Registration failed")
         
         val profileUpdates = UserProfileChangeRequest.Builder().setDisplayName(name).build()
-        firebaseUser.updateProfile(profileUpdates).await()
-        firebaseUser.sendEmailVerification().await()
+        u.updateProfile(profileUpdates).await()
+        u.sendEmailVerification().await()
 
         val user = User(
-            uid = firebaseUser.uid,
+            uid = u.uid,
             name = name,
-            email = firebaseUser.email,
-            photoUrl = firebaseUser.photoUrl?.toString(),
-            isAnonymous = firebaseUser.isAnonymous,
-            createdAt = System.currentTimeMillis(),
-            isEmailVerified = firebaseUser.isEmailVerified
+            email = u.email,
+            photoUrl = u.photoUrl?.toString(),
+            isAnonymous = u.isAnonymous,
+            isEmailVerified = u.isEmailVerified,
+            createdAt = System.currentTimeMillis()
         )
         updateUserProfile(user, isNewUser = true)
         return user
@@ -202,15 +187,15 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
 
     suspend fun signInWithCredential(credential: AuthCredential): User {
         val result = auth.signInWithCredential(credential).await()
-        val firebaseUser = result.user ?: throw Exception("Sign in failed")
+        val u = result.user ?: throw Exception("Sign in failed")
         val isNew = result.additionalUserInfo?.isNewUser ?: false
         val user = User(
-            uid = firebaseUser.uid,
-            name = firebaseUser.displayName,
-            email = firebaseUser.email,
-            photoUrl = firebaseUser.photoUrl?.toString(),
-            isAnonymous = firebaseUser.isAnonymous,
-            isEmailVerified = firebaseUser.isEmailVerified,
+            uid = u.uid,
+            name = u.displayName,
+            email = u.email,
+            photoUrl = u.photoUrl?.toString(),
+            isAnonymous = u.isAnonymous,
+            isEmailVerified = u.isEmailVerified,
             createdAt = if (isNew) System.currentTimeMillis() else null
         )
         updateUserProfile(user, isNewUser = isNew)
@@ -221,9 +206,6 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         try {
             val userRef = firestore.collection("users").document(user.uid)
             
-            // On login, we only update identity and activity fields.
-            // We do NOT overwrite profile data (name, displayName, photoUrl) if it exists,
-            // as Firestore is the source of truth for the extended profile.
             val updates = HashMap<String, Any?>()
             updates["uid"] = user.uid
             updates["email"] = user.email
