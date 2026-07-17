@@ -25,7 +25,7 @@ class AuthManager(private val context: Context) {
     ) {
         val webClientId: String = context.getString(R.string.default_web_client_id)
         
-        Log.d(TAG, "signInWithGoogle: Using Web Client ID: $webClientId")
+        Log.i(TAG, "signInWithGoogle: Initiating request with Client ID: $webClientId")
 
         val googleIdOption = GetGoogleIdOption.Builder()
             .setFilterByAuthorizedAccounts(false)
@@ -39,37 +39,44 @@ class AuthManager(private val context: Context) {
 
         viewModel.viewModelScope.launch {
             try {
-                Log.i(TAG, "signInWithGoogle: Requesting Google Credentials...")
+                Log.d(TAG, "signInWithGoogle: Launching UI...")
                 val result = credentialManager.getCredential(
                     context = context,
                     request = request
                 )
                 
                 val credential = result.credential
-                Log.d(TAG, "Credential Type received: ${credential.type}")
+                Log.d(TAG, "Credential Type received: [${credential.type}]")
                 
-                // FIX: Use hardcoded string comparison to bypass potential SDK class-casting issues
-                if (credential.type == "com.google.android.libraries.identity.googleid.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL") {
+                // UNIVERSAL CHECK: Check both constant and raw string to ensure compatibility
+                val isGoogleType = credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL || 
+                                  credential.type.contains("googleid", ignoreCase = true)
+
+                if (isGoogleType) {
                     val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                    val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
+                    val idToken = googleIdTokenCredential.idToken
                     
-                    Log.i(TAG, "Google ID Token successfully parsed. Proceeding to Firebase login.")
-                    viewModel.signInWithCredential(firebaseCredential)
+                    if (idToken != null && idToken != "") {
+                        Log.i(TAG, "Token successfully extracted")
+                        val firebaseCredential = GoogleAuthProvider.getCredential(idToken, null)
+                        viewModel.signInWithCredential(firebaseCredential)
+                    } else {
+                        throw Exception("Google ID Token is empty")
+                    }
                 } else {
-                    Log.e(TAG, "Unsupported credential type: ${credential.type}")
-                    viewModel.handleExternalError(Exception("Authentication failed: Unrecognized login type (${credential.type})"))
+                    Log.e(TAG, "Mismatched credential type: ${credential.type}")
+                    viewModel.handleExternalError(Exception("Auth Mismatch: Unexpected response type from Google."))
                 }
             } catch (e: GetCredentialException) {
                 Log.e(TAG, "Credential Manager Error: ${e.message}")
-                val userMsg = when {
-                    e.message?.contains("7:") == true -> "Google Play Services error. Please check your internet and Google account."
-                    e.message?.contains("10:") == true -> "Developer error: SHA-1 or Web Client ID mismatch. Please verify Firebase Console."
-                    e.message?.contains("cancel") == true -> "Sign-in was cancelled."
+                val msg = when {
+                    e.message?.contains("10:") == true -> "Developer Error (10): Please verify that your SHA-1 is added to BOTH Firebase and Google Cloud Console."
+                    e.message?.contains("7:") == true -> "Network Error (7): Please check your connection."
                     else -> e.message ?: "Authentication failed"
                 }
-                viewModel.handleExternalError(Exception(userMsg))
+                viewModel.handleExternalError(Exception(msg))
             } catch (e: Exception) {
-                Log.e(TAG, "Unexpected login error", e)
+                Log.e(TAG, "Fatal Auth Error", e)
                 viewModel.handleExternalError(e)
             }
         }

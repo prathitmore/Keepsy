@@ -765,9 +765,13 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
         return if (trail.isEmpty()) "Unknown Location" else trail.joinToString(" • ") { it.name }
     }
 
+    private val _isUpdatingProfile = MutableStateFlow(false)
+    val isUpdatingProfile: StateFlow<Boolean> = _isUpdatingProfile.asStateFlow()
+
     // Account Actions
     fun updateProfile(name: String, displayName: String?) {
         viewModelScope.launch {
+            _isUpdatingProfile.value = true
             try {
                 // Ensure both name and displayName are updated in Firestore
                 val dName = displayName ?: name
@@ -776,28 +780,39 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
                 _refreshTrigger.value = System.currentTimeMillis()
             } catch (e: Exception) {
                 handleError(e)
+            } finally {
+                _isUpdatingProfile.value = false
             }
         }
     }
 
     fun updateProfilePicture(uri: Uri) {
         viewModelScope.launch {
+            _isUpdatingProfile.value = true
             try {
-                KeepsyLogger.i("Starting profile picture update flow for $uri")
+                KeepsyLogger.i("KeepsyViewModel: Starting profile picture update flow for $uri")
                 val compressedUri = com.keepsy.app.utils.ImageUtils.compressImage(getApplication(), uri)
                 val uploadUri = compressedUri ?: uri
                 
                 // Clear any existing error state before starting
                 _errorState.value = null
                 
+                // 1. Upload to Storage and get permanent URL
                 val url = accountRepository.uploadProfilePhoto(uploadUri)
+                
+                // 2. Update Auth and Firestore (This triggers the snapshot listener)
                 accountRepository.updateProfile(null, null, url)
+                
+                // 3. Safety delay for Cloud Propagation
+                delay(1500)
+                
+                // 4. Force refresh the Auth state for UI consistency
                 repository.refreshAuthState()
-                _refreshTrigger.value = System.currentTimeMillis()
-                KeepsyLogger.i("Profile picture update flow completed successfully")
+                
+                KeepsyLogger.i("KeepsyViewModel: Profile picture update flow completed successfully")
             } catch (e: Exception) {
-                KeepsyLogger.e("Profile picture update flow failed", e)
-                // Extract a user-friendly message for Storage errors
+                KeepsyLogger.e("KeepsyViewModel: Profile picture update flow failed", e)
+                // ... (rest of error handling)
                 val msg = e.message ?: ""
                 val userMessage = if (msg.contains("Object does not exist") || msg.contains("404")) {
                     "Cloud sync latency. The photo was uploaded successfully, but the public link is taking a moment to generate. Please pull to refresh in a few seconds."
@@ -807,6 +822,8 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
                     e.localizedMessage ?: "Failed to upload photo"
                 }
                 _errorState.value = KeepsyError.AuthError(userMessage)
+            } finally {
+                _isUpdatingProfile.value = false
             }
         }
     }

@@ -110,20 +110,25 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
 
             KeepsyLogger.d("FirebaseService: Uploading ${bytes.size} bytes")
             ref.putBytes(bytes, metadata).await()
-            KeepsyLogger.i("FirebaseService: Upload successful")
+            KeepsyLogger.i("FirebaseService: Upload successful, verifying indexing...")
             
-            delay(1500)
-            
+            // Enterprise-grade indexing verification loop
             var downloadUrl: String? = null
-            try {
-                downloadUrl = ref.downloadUrl.await().toString()
-            } catch (e: Exception) {
-                KeepsyLogger.w("FirebaseService: Download URL retrieval failed, retrying...")
-                delay(2000)
-                downloadUrl = ref.downloadUrl.await().toString()
+            for (attempt in 1..8) {
+                try {
+                    delay(1000L * attempt) // 1s, 2s, 3s... total ~36s max
+                    val url = ref.downloadUrl.await().toString()
+                    if (url != "") {
+                        downloadUrl = url
+                        KeepsyLogger.i("FirebaseService: Download URL verified at attempt $attempt")
+                        break
+                    }
+                } catch (e: Exception) {
+                    KeepsyLogger.w("FirebaseService: Verification attempt $attempt failed")
+                }
             }
             
-            return downloadUrl ?: throw Exception("Could not retrieve public URL from Storage")
+            return downloadUrl ?: throw Exception("Storage indexing delay: The photo was uploaded, but the public link is taking time. Please refresh in a minute.")
         } catch (e: Exception) {
             KeepsyLogger.e("FirebaseService: uploadProfilePicture pipeline failed", e)
             throw e
