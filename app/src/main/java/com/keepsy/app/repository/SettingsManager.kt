@@ -18,7 +18,6 @@ class SettingsManager(private val context: Context) {
         createSecurePrefs()
     } catch (e: Exception) {
         KeepsyLogger.e("SettingsManager: Secure storage corruption, performing recovery", e)
-        // Recovery: Clear the underlying file if possible
         context.getSharedPreferences("keepsy_secure_settings", Context.MODE_PRIVATE).edit().clear().apply()
         try {
             createSecurePrefs()
@@ -44,6 +43,16 @@ class SettingsManager(private val context: Context) {
     private val _lastUserId = MutableStateFlow<String?>(null)
     val lastUserId: StateFlow<String?> = _lastUserId
 
+    // Profile Cache for Instant UI
+    private val _localProfileCache = MutableStateFlow<LocalProfileData>(LocalProfileData())
+    val localProfileCache: StateFlow<LocalProfileData> = _localProfileCache
+
+    data class LocalProfileData(
+        val name: String? = null,
+        val displayName: String? = null,
+        val photoPath: String? = null
+    )
+
     init {
         loadSettings()
     }
@@ -52,8 +61,33 @@ class SettingsManager(private val context: Context) {
         try {
             _isOnboardingCompleted.value = prefs.getBoolean("onboarding_complete", false)
             _lastUserId.value = prefs.getString("last_user_id", null)
+            
+            _localProfileCache.value = LocalProfileData(
+                name = prefs.getString("local_profile_name", null),
+                displayName = prefs.getString("local_profile_display_name", null),
+                photoPath = prefs.getString("local_profile_photo_path", null)
+            )
         } catch (e: Exception) {
             KeepsyLogger.e("Failed to read settings", e)
+        }
+    }
+
+    fun updateLocalProfile(name: String? = null, displayName: String? = null, photoPath: String? = null) {
+        try {
+            val editor = prefs.edit()
+            name?.let { editor.putString("local_profile_name", it) }
+            displayName?.let { editor.putString("local_profile_display_name", it) }
+            photoPath?.let { editor.putString("local_profile_photo_path", it) }
+            editor.apply()
+            
+            _localProfileCache.value = _localProfileCache.value.copy(
+                name = name ?: _localProfileCache.value.name,
+                displayName = displayName ?: _localProfileCache.value.displayName,
+                photoPath = photoPath ?: _localProfileCache.value.photoPath
+            )
+            KeepsyLogger.d("SettingsManager: Local profile cache updated")
+        } catch (e: Exception) {
+            KeepsyLogger.e("Failed to update local profile cache", e)
         }
     }
 
@@ -79,6 +113,7 @@ class SettingsManager(private val context: Context) {
         try {
             prefs.edit().clear().apply()
             _isOnboardingCompleted.value = false
+            _localProfileCache.value = LocalProfileData()
         } catch (e: Exception) {
             KeepsyLogger.e("Failed to reset settings", e)
         }
