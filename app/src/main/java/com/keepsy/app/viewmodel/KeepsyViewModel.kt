@@ -296,12 +296,16 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
         if (auth is AuthState.Authenticated) {
             val user = auth.user
             
+            // PRIORITY: Use Firestore data (persistent), fallback to Auth data (session)
+            val nameValue = (doc?.get("name") as? String) ?: user.name ?: "Friend"
+            val photoValue = (doc?.get("photoUrl") as? String) ?: user.photoUrl
+
             UserProfile(
                 uid = user.uid,
-                name = (doc?.get("name") as? String) ?: user.name ?: "Friend",
-                displayName = (doc?.get("displayName") as? String) ?: user.name ?: "Friend",
+                name = nameValue,
+                displayName = (doc?.get("displayName") as? String) ?: nameValue,
                 email = user.email ?: "",
-                photoUrl = (doc?.get("photoUrl") as? String) ?: user.photoUrl,
+                photoUrl = photoValue,
                 memberSince = (doc?.get("createdAt") as? Long) ?: user.createdAt ?: System.currentTimeMillis(),
                 lastSyncAt = System.currentTimeMillis(),
                 totalItems = stats.totalItems,
