@@ -60,6 +60,7 @@ class KeepsyRepository(
         try {
             firebaseService.signInWithEmail(email, password)
         } catch (e: Exception) {
+            KeepsyLogger.e("KeepsyRepository: Sign in failed", e)
             _authState.value = AuthState.Error(e.localizedMessage ?: "Sign in failed")
         }
     }

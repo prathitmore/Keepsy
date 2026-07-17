@@ -50,22 +50,22 @@ class AuthManager(private val context: Context) {
                 )
                 
                 val credential = result.credential
+                Log.d(TAG, "Received credential type: ${credential.type}")
+                
                 if (credential is GoogleIdTokenCredential) {
                     Log.i(TAG, "signInWithGoogle: ID Token received")
                     val firebaseCredential = GoogleAuthProvider.getCredential(credential.idToken, null)
                     viewModel.signInWithCredential(firebaseCredential)
                 } else {
                     Log.e(TAG, "signInWithGoogle: Unexpected credential type: ${credential.type}")
-                    viewModel.handleExternalError(Exception("Authentication failed: invalid response"))
+                    // Improved error message to help diagnose configuration issues
+                    viewModel.handleExternalError(Exception("Google Auth mismatch (type: ${credential.type}). Please verify SHA-1 and Web Client ID in Firebase Console."))
                 }
             } catch (e: GetCredentialException) {
                 Log.e(TAG, "signInWithGoogle: Credential Manager Error: ${e.message}")
-                val msg = e.message ?: ""
-                val isTechnical = msg.contains("coroutine scope", ignoreCase = true) || 
-                                 msg.contains("composition", ignoreCase = true)
-                if (!isTechnical) {
-                    viewModel.handleExternalError(e)
-                }
+                // Often 'invalid response' comes from here if SHA-1 is missing
+                val msg = e.message ?: "Unknown credential error"
+                viewModel.handleExternalError(Exception("Authentication failed: $msg"))
             } catch (e: Exception) {
                 Log.e(TAG, "signInWithGoogle: Unexpected error", e)
                 viewModel.handleExternalError(e)
