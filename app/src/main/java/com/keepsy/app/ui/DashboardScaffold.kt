@@ -6,7 +6,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,42 +16,32 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.layout.ContentScale
-import coil.compose.AsyncImage
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import com.keepsy.app.model.SyncState
+import com.keepsy.app.model.UserProfile
 import com.keepsy.app.navigation.SubScreen
 import com.keepsy.app.navigation.TabScreen
-import com.keepsy.app.ui.activity.ActivityScreen
+import com.keepsy.app.ui.components.AccountBottomSheet
+import com.keepsy.app.ui.components.KeepsyBackgroundEffects
 import com.keepsy.app.ui.home.HomeScreen
-import com.keepsy.app.ui.items.AddEditItemScreen
-import com.keepsy.app.ui.items.ItemDetailsScreen
-import com.keepsy.app.ui.items.MoveItemScreen
-import com.keepsy.app.ui.search.SearchScreen
-import com.keepsy.app.ui.settings.BackupSyncScreen
-import com.keepsy.app.ui.settings.EditProfileScreen
-import com.keepsy.app.ui.settings.ProfileScreen
-import com.keepsy.app.ui.settings.SecurityScreen
-import com.keepsy.app.ui.settings.SettingsScreen
-import com.keepsy.app.ui.settings.SubscriptionScreen
-import com.keepsy.app.ui.spaces.AddEditSpaceScreen
-import com.keepsy.app.ui.spaces.SpaceDetailsScreen
 import com.keepsy.app.ui.spaces.SpacesScreen
+import com.keepsy.app.ui.search.SearchScreen
+import com.keepsy.app.ui.activity.ActivityScreen
+import com.keepsy.app.ui.settings.SettingsScreen
 import com.keepsy.app.ui.theme.*
-import com.keepsy.app.ui.trash.TrashBinScreen
-import com.keepsy.app.model.SyncState
 import com.keepsy.app.viewmodel.KeepsyViewModel
-import com.keepsy.app.ui.components.*
 
-data class NavItem(val tab: TabScreen, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+data class NavItem(val tab: TabScreen, val icon: ImageVector)
 
 @Composable
 fun DashboardScaffold(
@@ -66,7 +55,6 @@ fun DashboardScaffold(
     val syncStatus by viewModel.syncState.collectAsStateWithLifecycle()
     val spacesList by viewModel.spaces.collectAsStateWithLifecycle(emptyList())
     val categoriesList by viewModel.categories.collectAsStateWithLifecycle(emptyList())
-
     val profile by viewModel.userProfile.collectAsStateWithLifecycle()
 
     if (currentSubScreen == SubScreen.AccountCenter) {
@@ -74,9 +62,7 @@ fun DashboardScaffold(
             profile = profile,
             onClose = onPopSub,
             onNavigateToSub = onNavigateToSub,
-            onSignOut = { 
-                viewModel.signOut() 
-            }
+            onSignOut = { viewModel.signOut() }
         )
     }
 
@@ -85,7 +71,6 @@ fun DashboardScaffold(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Shared Background Effects
         KeepsyBackgroundEffects()
 
         Scaffold(
@@ -102,14 +87,6 @@ fun DashboardScaffold(
                     }
                 }
             },
-            bottomBar = {
-                if (currentSubScreen == SubScreen.None) {
-                    FloatingBottomNavigation(
-                        currentTab = currentTab,
-                        onTabSelected = onTabSelected
-                    )
-                }
-            },
             floatingActionButton = {
                 if (currentSubScreen == SubScreen.None) {
                     val showFab = when (currentTab) {
@@ -117,12 +94,8 @@ fun DashboardScaffold(
                         TabScreen.Spaces -> true
                         else -> false
                     }
-                    
                     if (showFab) {
-                        PremiumFAB(
-                            currentTab = currentTab,
-                            onNavigateToSub = onNavigateToSub
-                        )
+                        PremiumFAB(currentTab = currentTab, onNavigateToSub = onNavigateToSub)
                     }
                 }
             }
@@ -154,68 +127,23 @@ fun DashboardScaffold(
                                 TabScreen.Settings -> SettingsScreen(viewModel, onNavigateToSub)
                             }
                         }
-                    } else {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            when (sub) {
-                                is SubScreen.ItemDetails -> ItemDetailsScreen(
-                                    itemId = sub.itemId,
-                                    viewModel = viewModel,
-                                    onPop = onPopSub,
-                                    onNavigateToSub = onNavigateToSub
-                                )
-                                is SubScreen.SpaceDetails -> SpaceDetailsScreen(
-                                    spaceId = sub.spaceId,
-                                    viewModel = viewModel,
-                                    onPop = onPopSub,
-                                    onNavigateToSub = onNavigateToSub
-                                )
-                                is SubScreen.AddEditItem -> AddEditItemScreen(
-                                    itemId = sub.itemId,
-                                    initialSpaceId = sub.spaceId,
-                                    viewModel = viewModel,
-                                    onPop = onPopSub
-                                )
-                                is SubScreen.AddEditSpace -> AddEditSpaceScreen(
-                                    spaceId = sub.spaceId,
-                                    parentSpaceId = sub.parentSpaceId,
-                                    viewModel = viewModel,
-                                    onPop = onPopSub
-                                )
-                                is SubScreen.MoveItem -> MoveItemScreen(
-                                    itemId = sub.itemId,
-                                    viewModel = viewModel,
-                                    onPop = onPopSub
-                                )
-                                SubScreen.TrashBin -> TrashBinScreen(
-                                    viewModel = viewModel,
-                                    onPop = onPopSub
-                                )
-                                is SubScreen.Profile -> ProfileScreen(
-                                    viewModel = viewModel,
-                                    onPop = onPopSub,
-                                    onNavigateToSub = onNavigateToSub
-                                )
-                                SubScreen.EditProfile -> EditProfileScreen(
-                                    viewModel = viewModel,
-                                    onPop = onPopSub
-                                )
-                                SubScreen.BackupSync -> BackupSyncScreen(
-                                    viewModel = viewModel,
-                                    onPop = onPopSub
-                                )
-                                SubScreen.Subscription -> SubscriptionScreen(
-                                    viewModel = viewModel,
-                                    onPop = onPopSub
-                                )
-                                SubScreen.SecurityCenter -> SecurityScreen(
-                                    viewModel = viewModel,
-                                    onPop = onPopSub
-                                )
-                                else -> {}
-                            }
-                        }
                     }
                 }
+            }
+        }
+
+        // NAVIGATION BAR - TRUE FLOATING OVERLAY
+        if (currentSubScreen == SubScreen.None) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .navigationBarsPadding(),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                FloatingBottomNavigation(
+                    currentTab = currentTab,
+                    onTabSelected = onTabSelected
+                )
             }
         }
     }
@@ -224,7 +152,7 @@ fun DashboardScaffold(
 @Composable
 fun PremiumTopBar(
     currentTab: TabScreen,
-    profile: com.keepsy.app.model.UserProfile?,
+    profile: UserProfile?,
     onAccountClick: () -> Unit
 ) {
     val title = when (currentTab) {
@@ -243,12 +171,14 @@ fun PremiumTopBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.ExtraBold
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             if (currentTab == TabScreen.Home) {
                 Text(
@@ -261,6 +191,8 @@ fun PremiumTopBar(
             }
         }
         
+        Spacer(modifier = Modifier.width(16.dp))
+
         Surface(
             modifier = Modifier
                 .size(44.dp)
@@ -274,7 +206,6 @@ fun PremiumTopBar(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
         ) {
             Box(contentAlignment = Alignment.Center) {
-                // ALWAYS show initials as the base layer
                 Text(
                     text = com.keepsy.app.utils.AvatarUtils.getInitials(profile?.name),
                     style = MaterialTheme.typography.titleMedium,
@@ -282,7 +213,6 @@ fun PremiumTopBar(
                     color = MaterialTheme.colorScheme.primary
                 )
                 
-                // Overlay photo if available
                 if (profile?.photoUrl != null && profile?.photoUrl != "") {
                     AsyncImage(
                         model = profile?.photoUrl,
@@ -313,19 +243,18 @@ fun FloatingBottomNavigation(
 
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(bottom = 16.dp, start = 24.dp, end = 24.dp),
+            .padding(bottom = 20.dp, start = 24.dp, end = 24.dp)
+            .fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {
         Surface(
             modifier = Modifier
                 .height(64.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth(0.95f), // Slightly narrower for floating feel
             shape = RoundedCornerShape(32.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
-            shadowElevation = 12.dp
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
+            shadowElevation = 16.dp
         ) {
             Row(
                 modifier = Modifier.fillMaxSize(),
@@ -335,11 +264,11 @@ fun FloatingBottomNavigation(
                 items.forEach { item ->
                     val selected = currentTab == item.tab
                     val color by animateColorAsState(
-                        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f),
                         label = "icon_color"
                     )
                     val scale by animateFloatAsState(
-                        targetValue = if (selected) 1.2f else 1f,
+                        targetValue = if (selected) 1.25f else 1f,
                         label = "icon_scale"
                     )
 
@@ -363,13 +292,13 @@ fun FloatingBottomNavigation(
                                 contentDescription = null,
                                 tint = color,
                                 modifier = Modifier
-                                    .size(24.dp)
+                                    .size(26.dp)
                                     .graphicsLayer(scaleX = scale, scaleY = scale)
                             )
-                            AnimatedVisibility(visible = selected) {
+                            if (selected) {
                                 Box(
                                     modifier = Modifier
-                                        .padding(top = 4.dp)
+                                        .padding(top = 2.dp)
                                         .size(4.dp)
                                         .clip(CircleShape)
                                         .background(MaterialTheme.colorScheme.primary)
@@ -388,86 +317,73 @@ fun PremiumFAB(
     currentTab: TabScreen,
     onNavigateToSub: (SubScreen) -> Unit
 ) {
-    val icon = if (currentTab == TabScreen.Home) Icons.Default.Add else Icons.Default.AddHome
-    val text = if (currentTab == TabScreen.Home) "Item" else "Space"
-    
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (isPressed) 0.9f else 1f, label = "fab_scale")
-
-    FloatingActionButton(
-        onClick = {
-            if (currentTab == TabScreen.Home) {
-                onNavigateToSub(SubScreen.AddEditItem())
-            } else {
+    LargeFloatingActionButton(
+        onClick = { 
+            if (currentTab == TabScreen.Spaces) {
                 onNavigateToSub(SubScreen.AddEditSpace())
+            } else {
+                onNavigateToSub(SubScreen.AddEditItem())
             }
         },
-        containerColor = Color.Transparent,
-        contentColor = Color.White,
-        modifier = Modifier
-            .navigationBarsPadding()
-            .padding(bottom = 24.dp)
-            .graphicsLayer(scaleX = scale, scaleY = scale)
-            .shadow(12.dp, CircleShape, spotColor = PrimaryAccent.copy(alpha = 0.5f))
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = Color.Black,
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier.padding(bottom = 80.dp, end = 8.dp) // Move FAB up to clear the Navbar
     ) {
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(PrimaryPurple, PrimaryAccent)
-                    ),
-                    CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = "Add $text",
-                modifier = Modifier.size(28.dp)
-            )
-        }
+        Icon(
+            imageVector = if (currentTab == TabScreen.Spaces) Icons.Default.AddHomeWork else Icons.Default.Add,
+            contentDescription = "Add",
+            modifier = Modifier.size(32.dp)
+        )
     }
 }
 
 @Composable
 fun SyncIndicator(state: SyncState) {
-    if (state == SyncState.IDLE || state == SyncState.SYNCED || state == SyncState.COMPLETED) return
-    
-    val text = when (state) {
-        SyncState.SYNCING -> "Syncing..."
-        SyncState.UPLOADING -> "Uploading changes..."
-        SyncState.DOWNLOADING -> "Downloading data..."
-        SyncState.WAITING_FOR_INTERNET -> "Waiting for internet..."
-        SyncState.DIRTY -> "Changes queued"
-        SyncState.FAILED -> "Sync failed"
-        SyncState.DELETED_PENDING_SYNC -> "Syncing deletions"
-        else -> ""
-    }
-    
-    if (text == "") return
-
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(28.dp),
-        color = PrimaryPurple.copy(alpha = 0.9f)
+    val visible = state != SyncState.IDLE && state != SyncState.SYNCED && state != SyncState.COMPLETED
+    AnimatedVisibility(
+        visible = visible,
+        enter = expandVertically() + fadeIn(),
+        exit = shrinkVertically() + fadeOut()
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+        val text = when (state) {
+            SyncState.SYNCING -> "Refreshing memory..."
+            SyncState.UPLOADING -> "Saving to cloud..."
+            SyncState.DOWNLOADING -> "Fetching updates..."
+            SyncState.FAILED -> "Sync paused"
+            else -> ""
+        }
+        
+        val color = when (state) {
+            SyncState.UPLOADING -> PrimaryAccent
+            SyncState.DOWNLOADING -> PrimaryPurple
+            SyncState.FAILED -> ErrorRed
+            else -> MaterialTheme.colorScheme.primary
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(color.copy(alpha = 0.1f))
+                .padding(vertical = 4.dp),
+            contentAlignment = Alignment.Center
         ) {
-            KeepsyGradientLoader(size = 14.dp, strokeWidth = 2.dp)
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                text = text, 
-                fontSize = 11.sp, 
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                letterSpacing = 0.5.sp
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (state != SyncState.FAILED) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(12.dp),
+                        strokeWidth = 2.dp,
+                        color = color
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = color,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }

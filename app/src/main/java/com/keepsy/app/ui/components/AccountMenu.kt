@@ -18,11 +18,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.keepsy.app.model.UserProfile
 import com.keepsy.app.navigation.SubScreen
 import com.keepsy.app.ui.theme.*
@@ -86,7 +88,10 @@ fun AccountBottomSheet(
                         // Image overlay
                         if (p.photoUrl != null && p.photoUrl != "") {
                             AsyncImage(
-                                model = p.photoUrl,
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(p.photoUrl)
+                                    .crossfade(true)
+                                    .build(),
                                 contentDescription = "Profile Photo",
                                 modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
                                 contentScale = ContentScale.Crop

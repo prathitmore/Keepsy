@@ -24,12 +24,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.keepsy.app.model.ActivityLog
 import com.keepsy.app.model.ItemWithDetails
 import com.keepsy.app.model.Space
@@ -61,7 +62,10 @@ fun SpaceHorizontalCard(space: Space, onClick: () -> Unit) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (space.photoUrl != null && space.photoUrl != "") {
                 AsyncImage(
-                    model = space.photoUrl,
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(space.photoUrl)
+                        .crossfade(true)
+                        .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -122,7 +126,10 @@ fun ItemRowCard(itemDetails: ItemWithDetails, onClick: () -> Unit) {
         Row(modifier = Modifier.fillMaxWidth().padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
             if (itemDetails.item.photoUrl != null && itemDetails.item.photoUrl != "") {
                 AsyncImage(
-                    model = itemDetails.item.photoUrl, 
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(itemDetails.item.photoUrl)
+                        .crossfade(true)
+                        .build(), 
                     contentDescription = null, 
                     contentScale = ContentScale.Crop, 
                     modifier = Modifier.size(80.dp).clip(RoundedCornerShape(20.dp)).border(1.dp, MaterialTheme.colorScheme.outline.copy(0.1f), RoundedCornerShape(20.dp))
@@ -201,7 +208,15 @@ fun PremiumItemCard(itemDetails: ItemWithDetails, onClick: () -> Unit, modifier:
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (itemDetails.item.photoUrl != null && itemDetails.item.photoUrl != "") {
-                AsyncImage(model = itemDetails.item.photoUrl, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(itemDetails.item.photoUrl)
+                        .crossfade(true)
+                        .build(), 
+                    contentDescription = null, 
+                    contentScale = ContentScale.Crop, 
+                    modifier = Modifier.fillMaxSize()
+                )
                 Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.85f)))))
             } else {
                 Box(modifier = Modifier.fillMaxSize().background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary.copy(0.1f), MaterialTheme.colorScheme.surface))), contentAlignment = Alignment.Center) {

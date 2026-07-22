@@ -20,8 +20,6 @@ import kotlinx.coroutines.withTimeout
 import java.util.HashMap
 import java.io.File
 import java.io.FileOutputStream
-import java.io.InputStream
-import java.io.OutputStream
 
 class FirebaseService(private val analytics: FirebaseAnalytics) {
 
@@ -55,27 +53,42 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
     }
 
     suspend fun updateProfile(name: String?, displayName: String?, photoUrl: String?) {
-        val user = auth.currentUser ?: throw Exception("No authenticated session")
+        val user = auth.currentUser ?: throw Exception("Auth session missing")
         val profileUpdates = UserProfileChangeRequest.Builder()
+        
         if (name != null) profileUpdates.setDisplayName(name)
-        if (photoUrl != null && photoUrl != "") { profileUpdates.setPhotoUri(Uri.parse(photoUrl)) }
+        
+        // Use null to clear photo in Firebase Auth
+        if (photoUrl == "") {
+            profileUpdates.setPhotoUri(null)
+        } else if (photoUrl != null) {
+            profileUpdates.setPhotoUri(Uri.parse(photoUrl))
+        }
+        
         try {
             user.updateProfile(profileUpdates.build()).await()
             user.reload().await()
         } catch (e: Exception) { KeepsyLogger.e("Auth sync failed", e) }
+
         val updates = HashMap<String, Any?>()
         if (name != null) updates["profile_name"] = name
         if (displayName != null) updates["profile_display_name"] = displayName
-        if (photoUrl != null) updates["profile_photo_url"] = photoUrl
-        if (updates.isNotEmpty()) { firestore.collection("users").document(user.uid).set(updates, SetOptions.merge()).await() }
+        
+        // In Firestore, we store the actual value (null, empty, or URL)
+        if (photoUrl != null) {
+            updates["profile_photo_url"] = if (photoUrl == "") null else photoUrl
+        }
+        
+        if (updates.isNotEmpty()) {
+            firestore.collection("users").document(user.uid).set(updates, SetOptions.merge()).await()
+        }
     }
 
     suspend fun uploadProfilePicture(uri: Uri): String { return uploadImageInternal(uri, "profile", "avatar") }
     suspend fun uploadEntityImage(uri: Uri, collection: String, entityName: String): String { return uploadImageInternal(uri, collection, entityName) }
 
     private suspend fun uploadImageInternal(uri: Uri, folder: String, prefix: String): String {
-        val currentUser = auth.currentUser ?: throw Exception("Auth session missing")
-        val uid = currentUser.uid
+        val uid = auth.currentUser?.uid ?: throw Exception("Auth session missing")
         val timestamp = System.currentTimeMillis()
         val fileName = prefix + "_" + timestamp + ".jpg"
         
@@ -95,39 +108,35 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
             throw Exception("Local processing error: " + e.message)
         }
 
-        // NO LEADING SLASHES. ONLY RELATIVE CHILD CHAINING.
         val ref = storage.reference.child("users").child(uid).child(folder).child(fileName)
 
-        KeepsyLogger.i("FirebaseService: V9.3 Standard Logic")
-        KeepsyLogger.i("Target Bucket: " + ref.bucket)
-        KeepsyLogger.i("Target Path: " + ref.path)
-
         try {
-            // Use putFile with the standard Uri
             withTimeout(60000L) {
                 ref.putFile(Uri.fromFile(tempFile)).await()
             }
             
-            KeepsyLogger.i("FirebaseService: PutFile successful. Polling...")
-            
-            var downloadUrl: String? = null
-            for (attempt in 1..20) {
-                try {
-                    delay(1500L)
-                    val url = ref.downloadUrl.await().toString()
-                    if (url != "") {
-                        downloadUrl = url
-                        KeepsyLogger.i("FirebaseService: Verified link: " + url)
-                        break
-                    }
-                } catch (e: Exception) { }
+            // Speed improvement: Try immediate fetch first
+            return try {
+                ref.downloadUrl.await().toString()
+            } catch (e: Exception) {
+                // Fallback to polling if immediate fetch fails (rare now with putFile)
+                var downloadUrl: String? = null
+                for (attempt in 1..10) {
+                    delay(800L)
+                    try {
+                        val url = ref.downloadUrl.await().toString()
+                        if (url != "") {
+                            downloadUrl = url
+                            break
+                        }
+                    } catch (e: Exception) { }
+                }
+                downloadUrl ?: throw Exception("Indexing timeout")
+            } finally {
+                if (tempFile.exists()) tempFile.delete()
             }
-            
-            if (tempFile.exists()) tempFile.delete()
-            return downloadUrl ?: throw Exception("indexing timeout")
 
         } catch (e: Exception) {
-            KeepsyLogger.e("FirebaseService: PutFile Failed: " + e.message)
             if (tempFile.exists()) tempFile.delete()
             throw e
         }
@@ -135,12 +144,16 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
 
     suspend fun deleteProfilePicture() {
         val uid = auth.currentUser?.uid ?: throw Exception("No user")
+        // Clear metadata first for immediate UI update
         updateProfile(null, null, "")
+        
         try {
-            val res = storage.reference.child("users/$uid/profile/").listAll().await()
-            val items = res.items
-            for (i in 0..items.size - 1) { items[i].delete().await() }
-        } catch (e: Exception) { }
+            // Delete actual files from storage
+            val res = storage.reference.child("users").child(uid).child("profile").listAll().await()
+            res.items.forEach { it.delete().await() }
+        } catch (e: Exception) { 
+            KeepsyLogger.w("Storage cleanup failed: " + e.message)
+        }
     }
 
     suspend fun reloadUser(): Boolean { auth.currentUser?.reload()?.await(); return auth.currentUser?.isEmailVerified ?: false }

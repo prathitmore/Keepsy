@@ -411,7 +411,19 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun removeProfilePicture() { viewModelScope.launch { try { accountRepository.deleteProfilePhoto(); repository.refreshAuthState() } catch (e: Exception) { handleError(e) } } }
+    fun removeProfilePicture() {
+        viewModelScope.launch {
+            _isUpdatingProfile.value = true
+            try {
+                accountRepository.deleteProfilePhoto()
+                repository.refreshAuthState()
+            } catch (e: Exception) {
+                handleError(e)
+            } finally {
+                _isUpdatingProfile.value = false
+            }
+        }
+    }
     fun changePassword(current: String, new: String, onSuccess: () -> Unit) { viewModelScope.launch { try { accountRepository.changePassword(current, new); onSuccess() } catch (e: Exception) { handleError(e) } } }
 
     data class Stats(val totalItems: Int, val totalSpaces: Int, val totalCategories: Int, val favoriteItemsCount: Int, val trashItemsCount: Int, val tagsCount: Int, val activityCount: Int)

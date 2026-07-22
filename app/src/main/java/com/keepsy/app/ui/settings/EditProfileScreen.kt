@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -32,9 +33,11 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.keepsy.app.ui.components.*
+import coil.request.ImageRequest
+import com.keepsy.app.ui.components.KeepsyTextField
 import com.keepsy.app.ui.theme.*
 import com.keepsy.app.utils.AvatarUtils
+import com.keepsy.app.utils.KeepsyLogger
 import com.keepsy.app.viewmodel.KeepsyViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -119,9 +122,11 @@ fun EditProfileScreen(
                     photoLauncher.launch("image/*")
                 }
                 
-                if (profile?.photoUrl != null && profile?.photoUrl != "") {
+                // Show remove option if there is a photo (either URL or local preview)
+                if ((profile?.photoUrl != null && profile?.photoUrl != "") || localPhotoUri != null) {
                     PhotoOptionItem(Icons.Default.Delete, "Remove Photo", color = ErrorRed) {
                         showPhotoOptions = false
+                        localPhotoUri = null
                         viewModel.removeProfilePicture()
                     }
                 }
@@ -170,7 +175,7 @@ fun EditProfileScreen(
                     .background(Background)
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
-                    .padding(24.dp),
+                    .padding(horizontal = 24.dp, vertical = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
@@ -178,7 +183,7 @@ fun EditProfileScreen(
                 Box(contentAlignment = Alignment.BottomEnd) {
                     Box(
                         modifier = Modifier
-                            .size(100.dp)
+                            .size(120.dp)
                             .clip(CircleShape)
                             .background(
                                 Brush.linearGradient(
@@ -190,7 +195,10 @@ fun EditProfileScreen(
                     ) {
                         if (localPhotoUri != null && isUpdating) {
                             AsyncImage(
-                                model = localPhotoUri,
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(localPhotoUri)
+                                    .crossfade(true)
+                                    .build(),
                                 contentDescription = "Preview",
                                 modifier = Modifier.fillMaxSize().alpha(0.5f),
                                 contentScale = ContentScale.Crop
@@ -198,7 +206,10 @@ fun EditProfileScreen(
                             CircularProgressIndicator(color = Color.White)
                         } else if (profile?.photoUrl != null && profile?.photoUrl != "") {
                             AsyncImage(
-                                model = profile?.photoUrl,
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(profile?.photoUrl)
+                                    .crossfade(true)
+                                    .build(),
                                 contentDescription = "Profile Picture",
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
@@ -218,11 +229,11 @@ fun EditProfileScreen(
                         onClick = { showPhotoOptions = true },
                         enabled = !isUpdating,
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(36.dp)
                             .clip(CircleShape)
                             .background(if (isUpdating) Color.Gray else PrimaryAccent)
                     ) {
-                        Icon(Icons.Default.CameraAlt, contentDescription = "Change Photo", tint = Color.Black, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.CameraAlt, contentDescription = "Change Photo", tint = Color.Black, modifier = Modifier.size(20.dp))
                     }
                 }
 
@@ -263,20 +274,21 @@ fun EditProfileScreen(
             if (isUpdating) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Color.Black.copy(alpha = 0.3f)
+                    color = Color.Black.copy(alpha = 0.4f)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = SurfaceSecondary),
-                            shape = RoundedCornerShape(16.dp)
+                            shape = RoundedCornerShape(20.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                         ) {
                             Row(
-                                modifier = Modifier.padding(24.dp),
+                                modifier = Modifier.padding(horizontal = 32.dp, vertical = 24.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                horizontalArrangement = Arrangement.spacedBy(20.dp)
                             ) {
-                                CircularProgressIndicator(color = PrimaryAccent)
-                                Text("Syncing with Cloud...", color = TextPrimary, fontWeight = FontWeight.Medium)
+                                CircularProgressIndicator(color = PrimaryAccent, modifier = Modifier.size(24.dp), strokeWidth = 3.dp)
+                                Text("Syncing...", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             }
                         }
                     }
@@ -287,7 +299,12 @@ fun EditProfileScreen(
 }
 
 @Composable
-fun PhotoOptionItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: Color = TextPrimary, onClick: () -> Unit) {
+fun PhotoOptionItem(
+    icon: ImageVector,
+    text: String,
+    color: Color = TextPrimary,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -295,8 +312,8 @@ fun PhotoOptionItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label
             .padding(vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = color.copy(alpha = 0.7f))
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(label, style = MaterialTheme.typography.bodyLarge, color = color, fontWeight = FontWeight.Medium)
+        Icon(imageVector = icon, contentDescription = null, tint = color.copy(alpha = 0.8f), modifier = Modifier.size(24.dp))
+        Spacer(modifier = Modifier.width(20.dp))
+        Text(text = text, style = MaterialTheme.typography.bodyLarge, color = color, fontWeight = FontWeight.Medium)
     }
 }
