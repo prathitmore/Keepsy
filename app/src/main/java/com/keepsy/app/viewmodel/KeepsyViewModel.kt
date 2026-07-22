@@ -258,17 +258,33 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
 
     fun saveItem(itemId: Long, name: String, description: String, spaceId: Long, categoryId: Long, notes: String, photoUri: Uri?, tagList: List<String>, isFavorite: Boolean = false, onSuccess: () -> Unit) {
         viewModelScope.launch {
-            val path = photoUri?.let { repository.copyImageToAppStorage(getApplication(), it) }
-            val ex = if (itemId != 0L) repository.getItemById(itemId) else null
-            val item = Item(
-                itemId = itemId, name = name, description = description, spaceId = spaceId, categoryId = categoryId,
-                photoPath = path ?: ex?.photoPath, photoUrl = ex?.photoUrl,
-                createdAt = ex?.createdAt ?: System.currentTimeMillis(), updatedAt = System.currentTimeMillis(),
-                isFavorite = isFavorite, isDeleted = false, deletedAt = null, lastViewed = ex?.lastViewed,
-                notes = notes, version = (ex?.version ?: 0) + 1, syncState = "DIRTY",
-                lastSynced = ex?.lastSynced, remoteId = ex?.remoteId, spaceRemoteId = ex?.spaceRemoteId, categoryRemoteId = ex?.categoryRemoteId
-            )
-            repository.saveItem(item, tagList); onSuccess(); syncManager.performSync()
+            _isRestoringData.value = true
+            try {
+                val existing = if (itemId != 0L) repository.getItemById(itemId) else null
+                var cloudUrl = existing?.photoUrl
+                
+                if (photoUri != null) {
+                    KeepsyLogger.i("Uploading item image...")
+                    cloudUrl = firebaseService.uploadEntityImage(photoUri, "items", "item_$name")
+                }
+                
+                val item = Item(
+                    itemId = itemId, name = name, description = description, spaceId = spaceId, categoryId = categoryId,
+                    photoUrl = cloudUrl, createdAt = existing?.createdAt ?: System.currentTimeMillis(), 
+                    updatedAt = System.currentTimeMillis(), isFavorite = isFavorite, isDeleted = false, 
+                    deletedAt = null, lastViewed = existing?.lastViewed, notes = notes, 
+                    version = (existing?.version ?: 0) + 1, syncState = "DIRTY",
+                    lastSynced = existing?.lastSynced, remoteId = existing?.remoteId, 
+                    spaceRemoteId = existing?.spaceRemoteId, categoryRemoteId = existing?.categoryRemoteId
+                )
+                repository.saveItem(item, tagList)
+                onSuccess()
+                manualSync()
+            } catch (e: Exception) {
+                handleError(e)
+            } finally {
+                _isRestoringData.value = false
+            }
         }
     }
 
@@ -296,16 +312,31 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
 
     fun saveSpace(spaceId: Long, name: String, description: String, parentSpaceId: Long?, icon: String?, photoUri: Uri?, isFavorite: Boolean = false, onSuccess: () -> Unit) {
         viewModelScope.launch {
-            val path = photoUri?.let { repository.copyImageToAppStorage(getApplication(), it) }
-            val ex = if (spaceId != 0L) repository.getSpaceById(spaceId) else null
-            val space = Space(
-                spaceId = spaceId, parentSpaceId = parentSpaceId, name = name, description = description,
-                icon = icon, photoPath = path ?: ex?.photoPath, photoUrl = ex?.photoUrl,
-                createdAt = ex?.createdAt ?: System.currentTimeMillis(), updatedAt = System.currentTimeMillis(),
-                isFavorite = isFavorite, version = (ex?.version ?: 0) + 1, syncState = "DIRTY",
-                isDeleted = false, lastSynced = ex?.lastSynced, remoteId = ex?.remoteId, parentRemoteId = ex?.parentRemoteId
-            )
-            if (spaceId == 0L) repository.insertSpace(space) else repository.updateSpace(space); onSuccess(); syncManager.performSync()
+            _isRestoringData.value = true
+            try {
+                val existing = if (spaceId != 0L) repository.getSpaceById(spaceId) else null
+                var cloudUrl = existing?.photoUrl
+                
+                if (photoUri != null) {
+                    KeepsyLogger.i("Uploading space image...")
+                    cloudUrl = firebaseService.uploadEntityImage(photoUri, "spaces", "space_$name")
+                }
+                
+                val space = Space(
+                    spaceId = spaceId, parentSpaceId = parentSpaceId, name = name, description = description,
+                    icon = icon, photoUrl = cloudUrl, createdAt = existing?.createdAt ?: System.currentTimeMillis(), 
+                    updatedAt = System.currentTimeMillis(), isFavorite = isFavorite, version = (existing?.version ?: 0) + 1, 
+                    syncState = "DIRTY", isDeleted = false, lastSynced = existing?.lastSynced, 
+                    remoteId = existing?.remoteId, parentRemoteId = existing?.parentRemoteId
+                )
+                if (spaceId == 0L) repository.insertSpace(space) else repository.updateSpace(space)
+                onSuccess()
+                manualSync()
+            } catch (e: Exception) {
+                handleError(e)
+            } finally {
+                _isRestoringData.value = false
+            }
         }
     }
 
@@ -346,10 +377,6 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
         while (cid != null && cid != 0L) { val s = repository.getSpaceById(cid); if (s != null) { trail.add(0, s); cid = s.parentSpaceId } else cid = null }
         return trail
     }
-    suspend fun getFullSpacePath(spaceId: Long): String {
-        val trail = getFullSpaceTrail(spaceId)
-        return if (trail.isEmpty()) "Unknown Location" else trail.joinToString(" • ") { it.name }
-    }
 
     private val _isUpdatingProfile = MutableStateFlow(false)
     val isUpdatingProfile: StateFlow<Boolean> = _isUpdatingProfile.asStateFlow()
@@ -364,9 +391,23 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
 
     fun updateProfilePicture(uri: Uri) {
         viewModelScope.launch {
-            val lp = repository.copyImageToAppStorage(getApplication(), uri); settingsManager.updateLocalProfile(photoPath = lp); _isUpdatingProfile.value = true
-            try { val url = accountRepository.uploadProfilePhoto(com.keepsy.app.utils.ImageUtils.compressImage(getApplication(), uri) ?: uri); accountRepository.updateProfile(null, null, url); withTimeoutOrNull(15000) { userProfile.filter { it?.photoUrl == url }.first() }; repository.refreshAuthState() }
-            catch (e: Exception) { handleError(e) } finally { _isUpdatingProfile.value = false }
+            _isUpdatingProfile.value = true
+            try {
+                KeepsyLogger.i("Uploading profile photo...")
+                val compressed = com.keepsy.app.utils.ImageUtils.compressImage(getApplication(), uri) ?: uri
+                val url = accountRepository.uploadProfilePhoto(compressed)
+                
+                // Save only the cloud URL
+                accountRepository.updateProfile(null, null, url)
+                settingsManager.updateLocalProfile(photoPath = url) // Reuse photoPath field for cloud URL temporarily
+                
+                withTimeoutOrNull(20000) { userProfile.filter { it?.photoUrl == url }.first() }
+                repository.refreshAuthState()
+            } catch (e: Exception) { 
+                handleError(e) 
+            } finally { 
+                _isUpdatingProfile.value = false 
+            }
         }
     }
 

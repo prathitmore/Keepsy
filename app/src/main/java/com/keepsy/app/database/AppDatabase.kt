@@ -15,7 +15,7 @@ import com.keepsy.app.model.*
         ItemTagCrossRef::class,
         ActivityLog::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

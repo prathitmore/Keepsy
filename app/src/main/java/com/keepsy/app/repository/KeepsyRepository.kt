@@ -341,17 +341,6 @@ class KeepsyRepository(
     suspend fun permanentlyDeleteItem(itemId: Long) = withContext(Dispatchers.IO) {
         val item = appDao.getItemById(itemId)
         if (item != null) {
-            // Delete image file
-            item.photoPath?.let { path ->
-                try {
-                    val file = File(path)
-                    if (file.exists() && file.absolutePath.contains("keepsy/images")) {
-                        file.delete()
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
             // Mark as deleted in sync
             appDao.updateItem(item.copy(isDeleted = true, syncState = "DIRTY", updatedAt = System.currentTimeMillis()))
         }

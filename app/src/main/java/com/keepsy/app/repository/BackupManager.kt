@@ -113,18 +113,9 @@ class BackupManager(
                 appDao.insertSpace(space)
             }
 
-            // Restore Items (Correcting photo absolute paths to point to current device directories!)
+            // Restore Items
             for (item in container.items) {
-                val correctedPhotoPath = if (item.photoPath != null) {
-                    val originalFileName = File(item.photoPath).name
-                    val correctedFile = File(imagesDir, originalFileName)
-                    correctedFile.absolutePath
-                } else {
-                    null
-                }
-
-                val restoredItem = item.copy(photoPath = correctedPhotoPath)
-                appDao.insertItem(restoredItem)
+                appDao.insertItem(item)
             }
 
             // Restore Activity Logs

@@ -18,6 +18,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.tasks.await
 import java.util.HashMap
+import java.io.ByteArrayOutputStream
 
 class FirebaseService(private val analytics: FirebaseAnalytics) {
 
@@ -74,28 +75,56 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         val timestamp = System.currentTimeMillis()
         val storagePath = "users/$uid/$folder/${prefix}_$timestamp.jpg"
         val ref = storage.reference.child(storagePath)
+        
         try {
             val context = com.keepsy.app.KeepsyApplication.instance
-            val outputStream = java.io.ByteArrayOutputStream()
+            
+            // Read bytes into memory to bypass any URI permission revokes during the indexing wait
+            val outputStream = ByteArrayOutputStream()
             val buffer = ByteArray(8192)
-            val inputStream = if (uri.scheme == "content") { context.contentResolver.openInputStream(uri) } else { java.io.FileInputStream(java.io.File(uri.path ?: "")) } ?: throw Exception("Stream null")
+            val inputStream = context.contentResolver.openInputStream(uri) ?: throw Exception("Cannot access image data")
+            
             var bytesRead: Int
-            while (inputStream.read(buffer).also { bytesRead = it } != -1) { outputStream.write(buffer, 0, bytesRead) }
+            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                outputStream.write(buffer, 0, bytesRead)
+            }
             val bytes = outputStream.toByteArray()
             inputStream.close()
-            val metadata = StorageMetadata.Builder().setContentType("image/jpeg").setCustomMetadata("uid", uid).build()
-            KeepsyLogger.i("FirebaseService: Pushing ${bytes.size} bytes...")
+
+            val metadata = StorageMetadata.Builder()
+                .setContentType("image/jpeg")
+                .setCustomMetadata("uid", uid)
+                .build()
+
+            KeepsyLogger.i("FirebaseService: Absolute Upload Start. Path: $storagePath, Size: ${bytes.size}")
+            
+            // Step 1: Perform the upload and WAIT for it to be confirmed by the server
             ref.putBytes(bytes, metadata).await()
+            
+            KeepsyLogger.i("FirebaseService: Bytes accepted by server. Starting Indexing-Wait.")
+            
+            // Step 2: Aggressive Indexing Loop. 
+            // We retry for up to 30 seconds because Google's CDN can have latency.
             var downloadUrl: String? = null
-            for (attempt in 1..20) {
+            for (attempt in 1..25) {
                 try {
-                    delay(1000L)
+                    delay(1200L)
                     val url = ref.downloadUrl.await().toString()
-                    if (url != "") { downloadUrl = url; break }
-                } catch (e: Exception) { KeepsyLogger.w("FirebaseService: Indexing... ($attempt/20)") }
+                    if (url != "") {
+                        downloadUrl = url
+                        KeepsyLogger.i("FirebaseService: URL Indexing Success on attempt $attempt")
+                        break
+                    }
+                } catch (e: Exception) {
+                    KeepsyLogger.w("FirebaseService: Waiting for cloud link... ($attempt/25)")
+                }
             }
-            return downloadUrl ?: throw Exception("Cloud link timed out.")
-        } catch (e: Exception) { KeepsyLogger.e("Upload failure", e); throw e }
+            
+            return downloadUrl ?: throw Exception("The image was uploaded, but the cloud link failed to generate. Please refresh in a moment.")
+        } catch (e: Exception) {
+            KeepsyLogger.e("FirebaseService: Cloud Pipeline Failure", e)
+            throw e
+        }
     }
 
     suspend fun deleteProfilePicture() {
@@ -103,7 +132,8 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         updateProfile(null, null, "")
         try {
             val res = storage.reference.child("users/$uid/profile/").listAll().await()
-            for (i in 0..res.items.size - 1) { res.items[i].delete().await() }
+            val items = res.items
+            for (i in 0..items.size - 1) { items[i].delete().await() }
         } catch (e: Exception) { }
     }
 

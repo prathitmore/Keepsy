@@ -2,7 +2,6 @@ package com.keepsy.app.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import androidx.room.ForeignKey
 import androidx.room.Index
 
 @Entity(
@@ -82,7 +81,7 @@ data class Category(
 
 @Entity(
     tableName = "tags",
-    indices = [Index(value = ["name"], unique = true), Index(value = ["remoteId"])]
+    indices = [Index(value = ["name"]), Index(value = ["remoteId"])]
 )
 data class Tag(
     @PrimaryKey(autoGenerate = true) val tagId: Long = 0L,
@@ -96,11 +95,7 @@ data class Tag(
     val remoteId: String? = null
 )
 
-@Entity(
-    tableName = "item_tag_cross_ref",
-    primaryKeys = ["itemId", "tagId"],
-    indices = [Index(value = ["tagId"])]
-)
+@Entity(tableName = "item_tag_cross_ref", primaryKeys = ["itemId", "tagId"])
 data class ItemTagCrossRef(
     val itemId: Long,
     val tagId: Long
@@ -114,7 +109,7 @@ data class ActivityLog(
     @PrimaryKey(autoGenerate = true) val activityId: Long = 0L,
     val itemId: Long,
     val itemName: String,
-    val actionType: String, // "CREATED", "UPDATED", "MOVED", "DELETED", "RESTORED", "VIEWED"
+    val actionType: String,
     val timestamp: Long = System.currentTimeMillis(),
     val details: String = "",
     val createdAt: Long = System.currentTimeMillis(),
