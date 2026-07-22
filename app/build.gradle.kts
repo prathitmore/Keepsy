@@ -84,6 +84,7 @@ secrets {
 dependencies {
   implementation(platform(libs.androidx.compose.bom))
   implementation(libs.androidx.core.splashscreen)
+  implementation(libs.androidx.exifinterface)
   implementation(platform(libs.firebase.bom))
   implementation(libs.firebase.analytics)
   implementation(libs.firebase.auth)
