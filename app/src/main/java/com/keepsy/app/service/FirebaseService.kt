@@ -9,7 +9,6 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.StorageMetadata
 import com.keepsy.app.model.User
 import com.keepsy.app.utils.KeepsyLogger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -19,7 +18,10 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
 import java.util.HashMap
-import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
+import java.io.OutputStream
 
 class FirebaseService(private val analytics: FirebaseAnalytics) {
 
@@ -72,66 +74,63 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
     suspend fun uploadEntityImage(uri: Uri, collection: String, entityName: String): String { return uploadImageInternal(uri, collection, entityName) }
 
     private suspend fun uploadImageInternal(uri: Uri, folder: String, prefix: String): String {
-        val uid = auth.currentUser?.uid ?: throw Exception("No authenticated user")
+        val uid = auth.currentUser?.uid ?: throw Exception("Not logged in")
         val timestamp = System.currentTimeMillis()
         val fileName = prefix + "_" + timestamp.toString() + ".jpg"
         
         val context = com.keepsy.app.KeepsyApplication.instance
-        val out = ByteArrayOutputStream()
-        val inputStream = context.contentResolver.openInputStream(uri) ?: throw Exception("Stream error")
-        val buffer = ByteArray(16384)
-        var n: Int
-        while (inputStream.read(buffer).also { n = it } != -1) { out.write(buffer, 0, n) }
-        val bytes = out.toByteArray()
-        inputStream.close()
-
-        val metadata = StorageMetadata.Builder()
-            .setContentType("image/jpeg")
-            .build()
-
-        val defaultBucket = com.google.firebase.FirebaseApp.getInstance().options.storageBucket ?: "keepsy-project.firebasestorage.app"
-        val buckets = mutableListOf("gs://$defaultBucket", "gs://keepsy-project.appspot.com", "gs://keepsy-project")
-
-        var lastError: Exception? = null
-
-        for (bucketUrl in buckets) {
-            try {
-                KeepsyLogger.i("FirebaseService: Attempting upload to $bucketUrl")
-                val storageRef = FirebaseStorage.getInstance(bucketUrl).reference
-                
-                // Using .child() chaining is the safest way to build paths without slashes issues
-                val fileRef = storageRef.child("users").child(uid).child(folder).child(fileName)
-                
-                KeepsyLogger.i("FirebaseService: Final path to write: " + fileRef.path)
-
-                withTimeout(40000L) {
-                    fileRef.putBytes(bytes, metadata).await()
-                }
-                
-                KeepsyLogger.i("FirebaseService: Put successful on " + bucketUrl)
-                
-                var finalUrl: String? = null
-                for (retry in 1..15) {
-                    try {
-                        delay(1200L)
-                        val url = fileRef.downloadUrl.await().toString()
-                        if (url != "") {
-                            finalUrl = url
-                            KeepsyLogger.i("FirebaseService: Link obtained: " + url)
-                            break
-                        }
-                    } catch (e: Exception) { }
-                }
-                
-                if (finalUrl != null) return finalUrl
-
-            } catch (e: Exception) {
-                KeepsyLogger.w("FirebaseService: Bucket " + bucketUrl + " failed: " + e.message)
-                lastError = e
+        val tempFile = File(context.cacheDir, "staging.jpg")
+        
+        try {
+            val input = context.contentResolver.openInputStream(uri) ?: throw Exception("No input")
+            val output = FileOutputStream(tempFile)
+            val buffer = ByteArray(16384)
+            var bytesRead: Int
+            while (input.read(buffer).also { bytesRead = it } != -1) {
+                output.write(buffer, 0, bytesRead)
             }
+            output.flush()
+            output.close()
+            input.close()
+        } catch (e: Exception) {
+            throw Exception("Local copy failed: " + e.message)
         }
 
-        throw lastError ?: Exception("All buckets failed diagnostic")
+        // NO LEADING SLASHES. ONLY RELATIVE.
+        val ref = storage.reference.child("users").child(uid).child(folder).child(fileName)
+
+        KeepsyLogger.i("FirebaseService: V9.2 - Final Standard Path Logic")
+        KeepsyLogger.i("Target Bucket: " + ref.bucket)
+        KeepsyLogger.i("Target Path: " + ref.path)
+
+        try {
+            // Use putFile which is the most stable for large objects and resumable sessions
+            withTimeout(60000L) {
+                ref.putFile(Uri.fromFile(tempFile)).await()
+            }
+            
+            KeepsyLogger.i("FirebaseService: PutFile successful. Polling...")
+            
+            var downloadUrl: String? = null
+            for (i in 1..20) {
+                try {
+                    delay(1500L)
+                    val url = ref.downloadUrl.await().toString()
+                    if (url != "") {
+                        downloadUrl = url
+                        break
+                    }
+                } catch (e: Exception) { }
+            }
+            
+            if (tempFile.exists()) tempFile.delete()
+            return downloadUrl ?: throw Exception("Timeout generating link")
+
+        } catch (e: Exception) {
+            KeepsyLogger.e("FirebaseService: PutFile Failed: " + e.message)
+            if (tempFile.exists()) tempFile.delete()
+            throw e
+        }
     }
 
     suspend fun deleteProfilePicture() {
