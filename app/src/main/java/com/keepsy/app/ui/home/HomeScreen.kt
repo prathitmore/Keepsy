@@ -149,8 +149,8 @@ fun HomeScreen(
             } else if (recentlyAdded.isEmpty()) {
                 item { EmptyState(icon = { Icon(Icons.Default.Inbox, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp)) }, title = "No items yet", description = "Add your first item to start organizing.", action = { PrimaryGradientButton("Add First Item", { onNavigateToSub(SubScreen.AddEditItem()) }, Modifier.width(200.dp)) }) }
             } else {
-                items(recentlyAdded) { item ->
-                    Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)) {
+                items(recentlyAdded.take(4)) { item ->
+                    Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)) {
                         ItemRowCard(itemDetails = item, onClick = { onNavigateToSub(SubScreen.ItemDetails(item.item.itemId)) })
                     }
                 }
@@ -162,15 +162,15 @@ fun HomeScreen(
 @Composable
 fun StatCard(title: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
     Card(
-        modifier = modifier.height(90.dp),
-        shape = RoundedCornerShape(20.dp),
+        modifier = modifier.height(100.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
             Column {
-                Text(text = value, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                Text(text = value, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                 Text(text = title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
             }
         }

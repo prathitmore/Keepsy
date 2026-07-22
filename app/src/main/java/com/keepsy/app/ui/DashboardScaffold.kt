@@ -117,13 +117,13 @@ fun DashboardScaffold(
                 Crossfade(
                     targetState = currentSubScreen,
                     label = "ScreenTransition",
-                    animationSpec = tween(400)
+                    animationSpec = tween(150)
                 ) { sub ->
                     when (sub) {
                         SubScreen.None -> {
                             AnimatedContent(
                                 targetState = currentTab,
-                                transitionSpec = { fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300)) },
+                                transitionSpec = { fadeIn(animationSpec = tween(100)) togetherWith fadeOut(animationSpec = tween(100)) },
                                 label = "TabTransition"
                             ) { tab ->
                                 when (tab) {
@@ -149,6 +149,21 @@ fun DashboardScaffold(
                         else -> {}
                     }
                 }
+            }
+        }
+
+        // NAVIGATION BAR - TRUE FLOATING OVERLAY
+        if (currentSubScreen == SubScreen.None) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .navigationBarsPadding(),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                FloatingBottomNavigation(
+                    currentTab = currentTab,
+                    onTabSelected = onTabSelected
+                )
             }
         }
     }
@@ -246,8 +261,7 @@ fun FloatingBottomNavigation(
 
     Box(
         modifier = Modifier
-            .navigationBarsPadding()
-            .padding(horizontal = 24.dp, vertical = 12.dp)
+            .padding(horizontal = 24.dp, vertical = 6.dp)
             .fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {
@@ -312,7 +326,7 @@ fun PremiumFAB(
         containerColor = MaterialTheme.colorScheme.primary,
         contentColor = Color.Black,
         shape = CircleShape,
-        modifier = Modifier.padding(bottom = 12.dp)
+        modifier = Modifier.padding(bottom = 0.dp)
     ) {
         Icon(
             imageVector = if (currentTab == TabScreen.Spaces) Icons.Default.AddHomeWork else Icons.Default.Add,

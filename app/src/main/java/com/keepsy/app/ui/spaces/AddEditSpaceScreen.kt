@@ -306,10 +306,9 @@ fun AddEditSpaceScreen(
             
             val iconIdList = listOf(
                 "home", "bedroom", "kitchen", "bathroom", "garage",
-                "office", "warehouse", "store", "workshop", "garden",
-                "car", "inbox", "box", "drawer", "closet",
-                "shelf", "cabinet", "backpack", "suitcase", "safe",
-                "archive", "devices", "lock"
+                "office", "workshop", "garden", "car", "inbox",
+                "box", "drawer", "closet", "shelf", "suitcase",
+                "safe", "devices", "lock"
             )
 
             // Display icons in multiple rows
