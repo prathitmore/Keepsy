@@ -106,35 +106,47 @@ fun DashboardScaffold(
                     transitionSpec = {
                         val isOpening = targetState != SubScreen.None
                         if (isOpening) {
-                            (fadeIn(animationSpec = tween(300)) + 
-                             scaleIn(initialScale = 0.98f, animationSpec = tween(300)))
+                            (slideInVertically(
+                                initialOffsetY = { it / 6 }, 
+                                animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy)
+                            ) + fadeIn(animationSpec = tween(300)))
                             .togetherWith(
                                 fadeOut(animationSpec = tween(150))
                             ).apply {
-                                targetContentZIndex = 1f // Ensure new content is on top
+                                targetContentZIndex = 1f
                             }
                         } else {
                             fadeIn(animationSpec = tween(200))
                             .togetherWith(
-                                (fadeOut(animationSpec = tween(300)) + 
-                                 scaleOut(targetScale = 0.98f, animationSpec = tween(300)))
+                                (slideOutVertically(
+                                    targetOffsetY = { it / 6 },
+                                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy)
+                                ) + fadeOut(animationSpec = tween(300)))
                             ).apply {
-                                targetContentZIndex = -1f // Ensure old content slides away
+                                targetContentZIndex = -1f
                             }
                         }
                     }
                 ) { sub ->
-                    // Add a solid background to each screen container to prevent "seeing through"
                     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                         when (sub) {
                             SubScreen.None -> {
                                 AnimatedContent(
                                     targetState = currentTab,
                                     transitionSpec = {
-                                        fadeIn(animationSpec = tween(200, easing = LinearEasing))
-                                        .togetherWith(
-                                            fadeOut(animationSpec = tween(100, easing = LinearEasing))
-                                        )
+                                        val from = initialState
+                                        val to = targetState
+                                        val tabs = listOf(TabScreen.Home, TabScreen.Spaces, TabScreen.Search, TabScreen.Activity, TabScreen.Settings)
+                                        val fromIndex = tabs.indexOf(from)
+                                        val toIndex = tabs.indexOf(to)
+                                        
+                                        if (toIndex > fromIndex) {
+                                            (slideInHorizontally(initialOffsetX = { it / 10 }) + fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)))
+                                            .togetherWith(fadeOut(animationSpec = tween(150, easing = FastOutSlowInEasing)))
+                                        } else {
+                                            (slideInHorizontally(initialOffsetX = { -it / 10 }) + fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)))
+                                            .togetherWith(fadeOut(animationSpec = tween(150, easing = FastOutSlowInEasing)))
+                                        }
                                     },
                                     label = "TabTransition"
                                 ) { tab ->

@@ -92,7 +92,7 @@ fun WelcomeScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = buildAnnotatedString {
-                        append("Keepsy")
+                        append("Keeps")
                         withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
                             append("y")
                         }

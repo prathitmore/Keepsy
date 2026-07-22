@@ -2,6 +2,7 @@ package com.keepsy.app.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -152,7 +153,13 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
-            Crossfade(targetState = appScreen, label = "AppTransition") { screen ->
+            AnimatedContent(
+                targetState = appScreen, 
+                label = "AppTransition",
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(500)) togetherWith fadeOut(animationSpec = tween(300))
+                }
+            ) { screen ->
                 when (screen) {
                     Screen.Splash -> SplashScreenView(onAnimationFinished = { isSplashAnimationComplete = true })
                     Screen.Auth -> {
