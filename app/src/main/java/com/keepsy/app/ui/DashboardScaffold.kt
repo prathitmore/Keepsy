@@ -180,7 +180,7 @@ fun PremiumTopBar(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+            .padding(horizontal = 24.dp, vertical = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -254,7 +254,7 @@ fun FloatingBottomNavigation(
 
     Box(
         modifier = Modifier
-            .padding(horizontal = 24.dp, vertical = 2.dp)
+            .padding(horizontal = 24.dp, vertical = 10.dp)
             .fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {
@@ -319,7 +319,7 @@ fun PremiumFAB(
         containerColor = MaterialTheme.colorScheme.primary,
         contentColor = Color.Black,
         shape = CircleShape,
-        modifier = Modifier.padding(bottom = 0.dp)
+        modifier = Modifier.padding(bottom = 84.dp)
     ) {
         Icon(
             imageVector = if (currentTab == TabScreen.Spaces) Icons.Default.AddHomeWork else Icons.Default.Add,

@@ -102,34 +102,34 @@ fun ItemRowCard(itemDetails: ItemWithDetails, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         color = MaterialTheme.colorScheme.surface.copy(0.4f),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
         interactionSource = interactionSource,
         modifier = Modifier.fillMaxWidth().graphicsLayer(scaleX = scale, scaleY = scale)
     ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             if (itemDetails.item.photoUrl != null && itemDetails.item.photoUrl != "") {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current).data(itemDetails.item.photoUrl).crossfade(true).build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(56.dp).clip(RoundedCornerShape(12.dp))
+                    modifier = Modifier.size(60.dp).clip(RoundedCornerShape(14.dp))
                 )
             } else {
-                Box(modifier = Modifier.size(56.dp).clip(RoundedCornerShape(12.dp)).background(parseCategoryColor(itemDetails.category?.color).copy(0.06f)), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.size(60.dp).clip(RoundedCornerShape(14.dp)).background(parseCategoryColor(itemDetails.category?.color).copy(0.06f)), contentAlignment = Alignment.Center) {
                     Icon(imageVector = getSmartItemIconVector(itemDetails.item.name, itemDetails.category?.icon), contentDescription = null, tint = parseCategoryColor(itemDetails.category?.color), modifier = Modifier.size(28.dp))
                 }
             }
-            Spacer(modifier = Modifier.width(18.dp))
+            Spacer(modifier = Modifier.width(20.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = itemDetails.item.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(text = itemDetails.space?.name ?: "No location", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = itemDetails.space?.name ?: "No location", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
                     Text(text = "•", color = MaterialTheme.colorScheme.secondary.copy(0.4f), style = MaterialTheme.typography.bodySmall)
                     Text(text = itemDetails.category?.name ?: "Other", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
                 }
             }
-            if (itemDetails.item.isFavorite) { Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp)) }
+            if (itemDetails.item.isFavorite) { Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp)) }
         }
     }
 }
