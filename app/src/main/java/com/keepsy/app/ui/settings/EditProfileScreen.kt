@@ -1,6 +1,9 @@
 package com.keepsy.app.ui.settings
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -22,9 +25,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.keepsy.app.ui.components.*
@@ -47,7 +52,7 @@ fun EditProfileScreen(
 
     var showPhotoOptions by remember { mutableStateOf(false) }
 
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
 
     val photoLauncher = rememberLauncherForActivityResult(
@@ -70,6 +75,18 @@ fun EditProfileScreen(
         }
     }
 
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            val uri = com.keepsy.app.utils.ImageUtils.createTempImageUri(context)
+            tempCameraUri = uri
+            cameraLauncher.launch(uri)
+        } else {
+            Toast.makeText(context, "Camera permission required to take photos", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     if (showPhotoOptions) {
         ModalBottomSheet(
             onDismissRequest = { showPhotoOptions = false },
@@ -87,9 +104,14 @@ fun EditProfileScreen(
                 
                 PhotoOptionItem(Icons.Default.Camera, "Take Photo") {
                     showPhotoOptions = false
-                    val uri = com.keepsy.app.utils.ImageUtils.createTempImageUri(context)
-                    tempCameraUri = uri
-                    cameraLauncher.launch(uri)
+                    val permissionCheck = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                    if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+                        val uri = com.keepsy.app.utils.ImageUtils.createTempImageUri(context)
+                        tempCameraUri = uri
+                        cameraLauncher.launch(uri)
+                    } else {
+                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
                 }
 
                 PhotoOptionItem(Icons.Default.PhotoLibrary, "Choose from Gallery") {
@@ -182,8 +204,9 @@ fun EditProfileScreen(
                                 contentScale = ContentScale.Crop
                             )
                         } else {
+                            val initials = if (name != "") AvatarUtils.getInitials(name) else "?"
                             Text(
-                                text = AvatarUtils.getInitials(name),
+                                text = initials,
                                 color = Color.White,
                                 style = MaterialTheme.typography.displaySmall,
                                 fontWeight = FontWeight.ExtraBold

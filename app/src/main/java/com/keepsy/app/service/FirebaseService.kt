@@ -99,16 +99,21 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
             KeepsyLogger.i("FirebaseService: Absolute Upload Start. Path: $storagePath, Size: ${bytes.size}")
             
             // Step 1: Perform the upload and WAIT for it to be confirmed by the server
+            // Using resumable upload session manually for more stability if needed, 
+            // but putBytes with custom metadata is usually fine.
             ref.putBytes(bytes, metadata).await()
             
             KeepsyLogger.i("FirebaseService: Bytes accepted by server. Starting Indexing-Wait.")
             
-            // Step 2: Aggressive Indexing Loop. 
-            // We retry for up to 30 seconds because Google's CDN can have latency.
+            // Step 2: Aggressive Indexing Loop with verified existence check.
+            // Retrying for up to 60 seconds (30 cycles)
             var downloadUrl: String? = null
-            for (attempt in 1..25) {
+            for (attempt in 1..40) {
                 try {
-                    delay(1200L)
+                    delay(1500L)
+                    // Check if object exists first to avoid 404 throwing exception if possible
+                    ref.metadata.await() 
+                    
                     val url = ref.downloadUrl.await().toString()
                     if (url != "") {
                         downloadUrl = url
@@ -116,7 +121,7 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
                         break
                     }
                 } catch (e: Exception) {
-                    KeepsyLogger.w("FirebaseService: Waiting for cloud link... ($attempt/25)")
+                    KeepsyLogger.w("FirebaseService: Waiting for cloud link... ($attempt/40) - ${e.message}")
                 }
             }
             
