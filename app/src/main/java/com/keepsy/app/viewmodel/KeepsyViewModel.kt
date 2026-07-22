@@ -416,6 +416,7 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
             _isUpdatingProfile.value = true
             try {
                 accountRepository.deleteProfilePhoto()
+                settingsManager.updateLocalProfile(photoPath = "")
                 repository.refreshAuthState()
             } catch (e: Exception) {
                 handleError(e)
