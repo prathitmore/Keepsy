@@ -48,6 +48,8 @@ fun HomeScreen(
         syncStatus == SyncState.DOWNLOADING
     }
 
+    val displayRecentlyAdded = remember(recentlyAdded) { recentlyAdded.take(4) }
+
     val pullToRefreshState = rememberPullToRefreshState()
 
     PullToRefreshBox(
@@ -149,7 +151,7 @@ fun HomeScreen(
             } else if (recentlyAdded.isEmpty()) {
                 item { EmptyState(icon = { Icon(Icons.Default.Inbox, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp)) }, title = "No items yet", description = "Add your first item to start organizing.", action = { PrimaryGradientButton("Add First Item", { onNavigateToSub(SubScreen.AddEditItem()) }, Modifier.width(200.dp)) }) }
             } else {
-                items(recentlyAdded.take(4)) { item ->
+                items(displayRecentlyAdded) { item ->
                     Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
                         ItemRowCard(itemDetails = item, onClick = { onNavigateToSub(SubScreen.ItemDetails(item.item.itemId)) })
                     }

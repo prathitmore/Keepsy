@@ -97,39 +97,55 @@ fun SpaceHorizontalCard(space: Space, onClick: () -> Unit) {
 fun ItemRowCard(itemDetails: ItemWithDetails, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (isPressed) 0.98f else 1f, label = "scale")
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "scale"
+    )
 
-    Surface(
-        onClick = onClick,
-        color = MaterialTheme.colorScheme.surface.copy(0.4f),
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
-        interactionSource = interactionSource,
-        modifier = Modifier.fillMaxWidth().graphicsLayer(scaleX = scale, scaleY = scale)
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { visible = true }
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(400)) + slideInVertically(initialOffsetY = { 20 }, animationSpec = tween(400, easing = LinearOutSlowInEasing))
     ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (itemDetails.item.photoUrl != null && itemDetails.item.photoUrl != "") {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current).data(itemDetails.item.photoUrl).crossfade(true).build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(60.dp).clip(RoundedCornerShape(14.dp))
-                )
-            } else {
-                Box(modifier = Modifier.size(60.dp).clip(RoundedCornerShape(14.dp)).background(parseCategoryColor(itemDetails.category?.color).copy(0.06f)), contentAlignment = Alignment.Center) {
-                    Icon(imageVector = getSmartItemIconVector(itemDetails.item.name, itemDetails.category?.icon), contentDescription = null, tint = parseCategoryColor(itemDetails.category?.color), modifier = Modifier.size(28.dp))
+        Surface(
+            onClick = onClick,
+            color = MaterialTheme.colorScheme.surface.copy(0.4f),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
+            interactionSource = interactionSource,
+            modifier = Modifier.fillMaxWidth().graphicsLayer(scaleX = scale, scaleY = scale)
+        ) {
+            Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (itemDetails.item.photoUrl != null && itemDetails.item.photoUrl != "") {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(itemDetails.item.photoUrl)
+                            .crossfade(true)
+                            .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                            .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.size(60.dp).clip(RoundedCornerShape(14.dp))
+                    )
+                } else {
+                    Box(modifier = Modifier.size(60.dp).clip(RoundedCornerShape(14.dp)).background(parseCategoryColor(itemDetails.category?.color).copy(0.06f)), contentAlignment = Alignment.Center) {
+                        Icon(imageVector = getSmartItemIconVector(itemDetails.item.name, itemDetails.category?.icon), contentDescription = null, tint = parseCategoryColor(itemDetails.category?.color), modifier = Modifier.size(28.dp))
+                    }
                 }
-            }
-            Spacer(modifier = Modifier.width(20.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = itemDetails.item.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(text = itemDetails.space?.name ?: "No location", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-                    Text(text = "•", color = MaterialTheme.colorScheme.secondary.copy(0.4f), style = MaterialTheme.typography.bodySmall)
-                    Text(text = itemDetails.category?.name ?: "Other", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+                Spacer(modifier = Modifier.width(20.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = itemDetails.item.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(text = itemDetails.space?.name ?: "No location", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                        Text(text = "•", color = MaterialTheme.colorScheme.secondary.copy(0.4f), style = MaterialTheme.typography.bodySmall)
+                        Text(text = itemDetails.category?.name ?: "Other", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+                    }
                 }
+                if (itemDetails.item.isFavorite) { Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp)) }
             }
-            if (itemDetails.item.isFavorite) { Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp)) }
         }
     }
 }

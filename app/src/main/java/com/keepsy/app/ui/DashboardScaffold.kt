@@ -104,13 +104,22 @@ fun DashboardScaffold(
                 Crossfade(
                     targetState = currentSubScreen,
                     label = "ScreenTransition",
-                    animationSpec = tween(150)
+                    animationSpec = tween(
+                        durationMillis = 350,
+                        easing = FastOutSlowInEasing
+                    )
                 ) { sub ->
                     when (sub) {
                         SubScreen.None -> {
                             AnimatedContent(
                                 targetState = currentTab,
-                                transitionSpec = { fadeIn(animationSpec = tween(100)) togetherWith fadeOut(animationSpec = tween(100)) },
+                                transitionSpec = {
+                                    (fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) + 
+                                     scaleIn(initialScale = 0.96f, animationSpec = tween(250, easing = LinearOutSlowInEasing)))
+                                    .togetherWith(
+                                        fadeOut(animationSpec = tween(200, easing = FastOutLinearInEasing))
+                                    )
+                                },
                                 label = "TabTransition"
                             ) { tab ->
                                 when (tab) {
@@ -279,10 +288,20 @@ fun FloatingBottomNavigation(
                         label = "icon_color"
                     )
                     
+                    val scale by animateFloatAsState(
+                        targetValue = if (selected) 1.2f else 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        ),
+                        label = "icon_scale"
+                    )
+                    
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
+                            .graphicsLayer(scaleX = scale, scaleY = scale)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
