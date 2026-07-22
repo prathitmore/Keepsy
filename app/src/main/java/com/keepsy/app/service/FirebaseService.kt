@@ -72,17 +72,16 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
     suspend fun uploadEntityImage(uri: Uri, collection: String, entityName: String): String { return uploadImageInternal(uri, collection, entityName) }
 
     private suspend fun uploadImageInternal(uri: Uri, folder: String, prefix: String): String {
-        val uid = auth.currentUser?.uid ?: throw Exception("No session")
+        val uid = auth.currentUser?.uid ?: throw Exception("No authenticated user")
         val timestamp = System.currentTimeMillis()
         val fileName = prefix + "_" + timestamp.toString() + ".jpg"
         
         val context = com.keepsy.app.KeepsyApplication.instance
-        val inputStream = context.contentResolver.openInputStream(uri) ?: throw Exception("Cannot open image")
-        
         val out = ByteArrayOutputStream()
-        val buf = ByteArray(16384)
+        val inputStream = context.contentResolver.openInputStream(uri) ?: throw Exception("Stream error")
+        val buffer = ByteArray(16384)
         var n: Int
-        while (inputStream.read(buf).also { n = it } != -1) { out.write(buf, 0, n) }
+        while (inputStream.read(buffer).also { n = it } != -1) { out.write(buffer, 0, n) }
         val bytes = out.toByteArray()
         inputStream.close()
 
@@ -90,49 +89,49 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
             .setContentType("image/jpeg")
             .build()
 
-        val buckets = listOf(
-            "gs://keepsy-project.firebasestorage.app",
-            "gs://keepsy-project.appspot.com",
-            "gs://keepsy-project"
-        )
+        val defaultBucket = com.google.firebase.FirebaseApp.getInstance().options.storageBucket ?: "keepsy-project.firebasestorage.app"
+        val buckets = mutableListOf("gs://$defaultBucket", "gs://keepsy-project.appspot.com", "gs://keepsy-project")
 
-        var lastEx: Exception? = null
+        var lastError: Exception? = null
 
-        for (bucket in buckets) {
+        for (bucketUrl in buckets) {
             try {
-                KeepsyLogger.i("FirebaseService: Target Bucket: $bucket")
-                val st = FirebaseStorage.getInstance(bucket)
-                val ref = st.reference.child("users").child(uid).child(folder).child(fileName)
+                KeepsyLogger.i("FirebaseService: Attempting upload to $bucketUrl")
+                val storageRef = FirebaseStorage.getInstance(bucketUrl).reference
+                
+                // Using .child() chaining is the safest way to build paths without slashes issues
+                val fileRef = storageRef.child("users").child(uid).child(folder).child(fileName)
+                
+                KeepsyLogger.i("FirebaseService: Final path to write: " + fileRef.path)
 
-                KeepsyLogger.i("FirebaseService: Uploading... Path: ${ref.path}")
-
-                withTimeout(35000L) {
-                    ref.putBytes(bytes, metadata).await()
+                withTimeout(40000L) {
+                    fileRef.putBytes(bytes, metadata).await()
                 }
                 
-                KeepsyLogger.i("FirebaseService: Upload OK. Polling URL...")
+                KeepsyLogger.i("FirebaseService: Put successful on " + bucketUrl)
                 
-                var dUrl: String? = null
-                for (i in 1..20) {
+                var finalUrl: String? = null
+                for (retry in 1..15) {
                     try {
                         delay(1200L)
-                        val u = ref.downloadUrl.await().toString()
-                        if (u != "") {
-                            dUrl = u
+                        val url = fileRef.downloadUrl.await().toString()
+                        if (url != "") {
+                            finalUrl = url
+                            KeepsyLogger.i("FirebaseService: Link obtained: " + url)
                             break
                         }
                     } catch (e: Exception) { }
                 }
                 
-                if (dUrl != null) return dUrl
-                
+                if (finalUrl != null) return finalUrl
+
             } catch (e: Exception) {
-                KeepsyLogger.w("FirebaseService: Bucket $bucket failed: ${e.message}")
-                lastEx = e
+                KeepsyLogger.w("FirebaseService: Bucket " + bucketUrl + " failed: " + e.message)
+                lastError = e
             }
         }
 
-        throw lastEx ?: Exception("All buckets failed")
+        throw lastError ?: Exception("All buckets failed diagnostic")
     }
 
     suspend fun deleteProfilePicture() {
@@ -166,13 +165,17 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         return user
     }
 
-    suspend fun signInWithCredential(credential: AuthCredential): User {
+    suspend fun signUpWithCredential(credential: AuthCredential): User {
         val res = auth.signInWithCredential(credential).await()
         val u = res.user ?: throw Exception("Login fail")
         val isNew = res.additionalUserInfo?.isNewUser ?: false
         val user = User(u.uid, u.displayName, u.email, u.photoUrl?.toString(), isAnonymous = u.isAnonymous, isEmailVerified = u.isEmailVerified, createdAt = if (isNew) System.currentTimeMillis() else null)
         updateUserProfile(user, isNewUser = isNew)
         return user
+    }
+    
+    suspend fun signInWithCredential(credential: AuthCredential): User {
+        return signUpWithCredential(credential)
     }
 
     private suspend fun updateUserProfile(user: User, isNewUser: Boolean = false) {
