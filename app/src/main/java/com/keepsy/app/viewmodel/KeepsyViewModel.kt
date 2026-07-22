@@ -299,11 +299,11 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
             val path = photoUri?.let { repository.copyImageToAppStorage(getApplication(), it) }
             val ex = if (spaceId != 0L) repository.getSpaceById(spaceId) else null
             val space = Space(
-                spaceId = spaceId, parentSpaceId = parentSpaceId, remoteId = ex?.remoteId, name = name, description = description,
+                spaceId = spaceId, parentSpaceId = parentSpaceId, name = name, description = description,
                 icon = icon, photoPath = path ?: ex?.photoPath, photoUrl = ex?.photoUrl,
                 createdAt = ex?.createdAt ?: System.currentTimeMillis(), updatedAt = System.currentTimeMillis(),
                 isFavorite = isFavorite, version = (ex?.version ?: 0) + 1, syncState = "DIRTY",
-                isDeleted = false, lastSynced = ex?.lastSynced, parentRemoteId = ex?.parentRemoteId
+                isDeleted = false, lastSynced = ex?.lastSynced, remoteId = ex?.remoteId, parentRemoteId = ex?.parentRemoteId
             )
             if (spaceId == 0L) repository.insertSpace(space) else repository.updateSpace(space); onSuccess(); syncManager.performSync()
         }
@@ -345,6 +345,10 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
         val trail = mutableListOf<Space>(); var cid: Long? = spaceId
         while (cid != null && cid != 0L) { val s = repository.getSpaceById(cid); if (s != null) { trail.add(0, s); cid = s.parentSpaceId } else cid = null }
         return trail
+    }
+    suspend fun getFullSpacePath(spaceId: Long): String {
+        val trail = getFullSpaceTrail(spaceId)
+        return if (trail.isEmpty()) "Unknown Location" else trail.joinToString(" • ") { it.name }
     }
 
     private val _isUpdatingProfile = MutableStateFlow(false)

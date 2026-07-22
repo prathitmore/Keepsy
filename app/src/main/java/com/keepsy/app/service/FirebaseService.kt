@@ -23,7 +23,7 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
 
     private val auth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
-    private val storage = FirebaseStorage.getInstance("gs://keepsy-project.firebasestorage.app")
+    private val storage = FirebaseStorage.getInstance()
     private val crashlytics = FirebaseCrashlytics.getInstance()
 
     fun getCurrentUser(): User? {
@@ -114,24 +114,25 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
                 .build()
 
             KeepsyLogger.i("FirebaseService: Pushing ${bytes.size} bytes...")
-            ref.putBytes(bytes, metadata).await()
+            val uploadTask = ref.putBytes(bytes, metadata)
+            uploadTask.await()
             
-            // Hardened cloud propagation check
+            // Critical: Wait for storage indexing
             var downloadUrl: String? = null
-            for (attempt in 1..12) {
+            for (attempt in 1..15) {
                 try {
-                    delay(1200L)
+                    delay(1000L)
                     val url = ref.downloadUrl.await().toString()
                     if (url != "") {
                         downloadUrl = url
                         break
                     }
                 } catch (e: Exception) {
-                    KeepsyLogger.w("FirebaseService: Waiting for cloud indexing... ($attempt/12)")
+                    KeepsyLogger.w("FirebaseService: Link indexing... ($attempt/15)")
                 }
             }
             
-            return downloadUrl ?: throw Exception("Cloud link generation timeout.")
+            return downloadUrl ?: throw Exception("Upload verified but cloud link generation timed out.")
         } catch (e: Exception) {
             KeepsyLogger.e("FirebaseService: Critical upload failure", e)
             throw e

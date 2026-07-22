@@ -169,7 +169,7 @@ fun KeepsyApp(viewModel: KeepsyViewModel, modifier: Modifier = Modifier) {
                         viewModel = viewModel,
                         onFinished = {
                             KeepsyLogger.i("KeepsyApp: Onboarding finished")
-                            viewModel.setOnboardingCompleted()
+                            viewModel.setOnboardingCompleted(true)
                             viewModel.manualSync()
                         }
                     )
