@@ -17,6 +17,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
 import java.util.HashMap
 import java.io.ByteArrayOutputStream
 
@@ -78,49 +79,60 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         val context = com.keepsy.app.KeepsyApplication.instance
         val inputStream = context.contentResolver.openInputStream(uri) ?: throw Exception("Cannot open image")
         
-        val outputStream = ByteArrayOutputStream()
-        val buffer = ByteArray(8192)
-        var bytesRead: Int
-        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-            outputStream.write(buffer, 0, bytesRead)
-        }
-        val bytes = outputStream.toByteArray()
+        val out = ByteArrayOutputStream()
+        val buf = ByteArray(16384)
+        var n: Int
+        while (inputStream.read(buf).also { n = it } != -1) { out.write(buf, 0, n) }
+        val bytes = out.toByteArray()
         inputStream.close()
 
         val metadata = StorageMetadata.Builder()
             .setContentType("image/jpeg")
             .build()
 
-        val ref = storage.reference
-            .child("users")
-            .child(uid)
-            .child(folder)
-            .child(fileName)
-            
-        KeepsyLogger.i("FirebaseService: Standard PutBytes. Bucket: " + ref.bucket + ", Path: " + ref.path)
-        
-        try {
-            ref.putBytes(bytes, metadata).await()
-            KeepsyLogger.i("FirebaseService: Upload done. Polling for link...")
-            
-            var downloadUrl: String? = null
-            for (i in 1..20) {
-                try {
-                    delay(1000L)
-                    val url = ref.downloadUrl.await().toString()
-                    if (url != "") {
-                        downloadUrl = url
-                        break
-                    }
-                } catch (e: Exception) { }
+        val buckets = listOf(
+            "gs://keepsy-project.firebasestorage.app",
+            "gs://keepsy-project.appspot.com",
+            "gs://keepsy-project"
+        )
+
+        var lastEx: Exception? = null
+
+        for (bucket in buckets) {
+            try {
+                KeepsyLogger.i("FirebaseService: Target Bucket: $bucket")
+                val st = FirebaseStorage.getInstance(bucket)
+                val ref = st.reference.child("users").child(uid).child(folder).child(fileName)
+
+                KeepsyLogger.i("FirebaseService: Uploading... Path: ${ref.path}")
+
+                withTimeout(35000L) {
+                    ref.putBytes(bytes, metadata).await()
+                }
+                
+                KeepsyLogger.i("FirebaseService: Upload OK. Polling URL...")
+                
+                var dUrl: String? = null
+                for (i in 1..20) {
+                    try {
+                        delay(1200L)
+                        val u = ref.downloadUrl.await().toString()
+                        if (u != "") {
+                            dUrl = u
+                            break
+                        }
+                    } catch (e: Exception) { }
+                }
+                
+                if (dUrl != null) return dUrl
+                
+            } catch (e: Exception) {
+                KeepsyLogger.w("FirebaseService: Bucket $bucket failed: ${e.message}")
+                lastEx = e
             }
-            
-            return downloadUrl ?: throw Exception("Link generation timeout")
-            
-        } catch (e: Exception) {
-            KeepsyLogger.e("FirebaseService: ERROR - " + e.message)
-            throw e
         }
+
+        throw lastEx ?: Exception("All buckets failed")
     }
 
     suspend fun deleteProfilePicture() {
