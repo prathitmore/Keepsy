@@ -30,7 +30,7 @@ import com.keepsy.app.model.SyncState
 import com.keepsy.app.model.UserProfile
 import com.keepsy.app.navigation.SubScreen
 import com.keepsy.app.navigation.TabScreen
-import com.keepsy.app.ui.components.AccountBottomSheet
+import com.keepsy.app.ui.components.AccountCenterScreen
 import com.keepsy.app.ui.components.KeepsyBackgroundEffects
 import com.keepsy.app.ui.home.HomeScreen
 import com.keepsy.app.ui.spaces.*
@@ -58,15 +58,6 @@ fun DashboardScaffold(
     val categoriesList by viewModel.categories.collectAsStateWithLifecycle(emptyList())
     val profile by viewModel.userProfile.collectAsStateWithLifecycle()
 
-    if (currentSubScreen == SubScreen.AccountCenter) {
-        AccountBottomSheet(
-            profile = profile,
-            onClose = onPopSub,
-            onNavigateToSub = onNavigateToSub,
-            onSignOut = { viewModel.signOut() }
-        )
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -89,12 +80,8 @@ fun DashboardScaffold(
                 }
             },
             bottomBar = {
-                if (currentSubScreen == SubScreen.None) {
-                    FloatingBottomNavigation(
-                        currentTab = currentTab,
-                        onTabSelected = onTabSelected
-                    )
-                }
+                // FIXED: Removed the bottomBar slot completely to prevent double navbars
+                // We use the Floating overlay below instead.
             },
             floatingActionButton = {
                 if (currentSubScreen == SubScreen.None) {
@@ -135,6 +122,12 @@ fun DashboardScaffold(
                                 }
                             }
                         }
+                        SubScreen.AccountCenter -> AccountCenterScreen(
+                            profile = profile,
+                            onPop = onPopSub,
+                            onNavigateToSub = onNavigateToSub,
+                            onSignOut = { viewModel.signOut() }
+                        )
                         is SubScreen.ItemDetails -> ItemDetailsScreen(sub.itemId, viewModel, onPopSub, onNavigateToSub)
                         is SubScreen.SpaceDetails -> SpaceDetailsScreen(sub.spaceId, viewModel, onPopSub, onNavigateToSub)
                         is SubScreen.AddEditItem -> AddEditItemScreen(sub.itemId, sub.spaceId, viewModel, onPopSub)
@@ -152,7 +145,7 @@ fun DashboardScaffold(
             }
         }
 
-        // NAVIGATION BAR - TRUE FLOATING OVERLAY
+        // NAVIGATION BAR - TRUE FLOATING OVERLAY (Keep this one)
         if (currentSubScreen == SubScreen.None) {
             Box(
                 modifier = Modifier
@@ -261,7 +254,7 @@ fun FloatingBottomNavigation(
 
     Box(
         modifier = Modifier
-            .padding(horizontal = 24.dp, vertical = 6.dp)
+            .padding(horizontal = 24.dp, vertical = 2.dp)
             .fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {

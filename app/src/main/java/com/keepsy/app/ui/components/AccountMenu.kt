@@ -3,8 +3,10 @@ package com.keepsy.app.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
@@ -33,50 +35,37 @@ import com.keepsy.app.utils.AvatarUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountBottomSheet(
+fun AccountCenterScreen(
     profile: UserProfile?,
-    onClose: () -> Unit,
+    onPop: () -> Unit,
     onNavigateToSub: (SubScreen) -> Unit,
     onSignOut: () -> Unit
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onClose,
-        containerColor = MaterialTheme.colorScheme.background,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)) },
-        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
-    ) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Account Center", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onPop) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Background)
+            )
+        }
+    ) { padding ->
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 48.dp),
+                .fillMaxSize()
+                .background(Background)
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Close",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                Text(
-                    text = "Account Center",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
             profile?.let { p ->
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -90,7 +79,6 @@ fun AccountBottomSheet(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        // Initials fallback
                         Text(
                             text = AvatarUtils.getInitials(p.name),
                             color = Color.White,
@@ -98,7 +86,6 @@ fun AccountBottomSheet(
                             fontWeight = FontWeight.Bold
                         )
                         
-                        // Image overlay
                         if (p.photoUrl != null && p.photoUrl != "") {
                             AsyncImage(
                                 model = ImageRequest.Builder(LocalContext.current)
@@ -156,6 +143,9 @@ fun AccountBottomSheet(
             MenuSection(title = "SECURITY & SYSTEM") {
                 AccountMenuItem(Icons.Default.Security, "Security Center", "Password & device info", onClick = {
                     onNavigateToSub(SubScreen.SecurityCenter)
+                })
+                AccountMenuItem(Icons.Default.DeleteForever, "Wipe Data", "Clear local database", onClick = {
+                    // Logic already handled in Settings but could be linked here
                 })
             }
             
