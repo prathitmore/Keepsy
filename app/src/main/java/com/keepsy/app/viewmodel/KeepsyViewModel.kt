@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import com.keepsy.app.service.SecurityService
 import com.keepsy.app.utils.ErrorHandler
 import com.keepsy.app.utils.KeepsyError
@@ -298,9 +299,9 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
             val user = auth.user
             
             // Enterprise logic: Prioritize local cache for instant UI, merge with cloud
-            val nameValue = local.name ?: (doc?.get("name") as? String) ?: user.name ?: "Friend"
-            val displayNameValue = local.displayName ?: (doc?.get("displayName") as? String) ?: nameValue
-            val photoValue = local.photoPath ?: (doc?.get("photoUrl") as? String) ?: user.photoUrl
+            val nameValue = local.name ?: (doc?.get("profile_name") as? String) ?: user.name ?: "Friend"
+            val displayNameValue = local.displayName ?: (doc?.get("profile_display_name") as? String) ?: nameValue
+            val photoValue = local.photoPath ?: (doc?.get("profile_photo_url") as? String) ?: user.photoUrl
 
             UserProfile(
                 uid = user.uid,
@@ -438,6 +439,16 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
         try {
             // 1. Force a clean initial sync to see if there's remote data
             syncRepository.syncOnLogin()
+            
+            // 1.5 Sync Local Profile Cache from Firestore immediately on login
+            val cloudProfile = firebaseService.getProfileFlow().filterNotNull().first()
+            if (cloudProfile != null) {
+                settingsManager.updateLocalProfile(
+                    name = cloudProfile["profile_name"] as? String,
+                    displayName = cloudProfile["profile_display_name"] as? String,
+                    photoPath = cloudProfile["profile_photo_url"] as? String // We treat cloud URL as path for fallback display
+                )
+            }
             
             // 2. Check local database for ANY existing content
             val spaceCount = db.appDao().getSpaceCount()
@@ -787,6 +798,12 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
                 // 2. Sync with Cloud
                 val dName = displayName ?: name
                 accountRepository.updateProfile(name, dName, null)
+                
+                // 3. Verification Step
+                withTimeoutOrNull(10000) {
+                    userProfile.filter { it?.name == name && it?.displayName == dName }.first()
+                }
+
                 repository.refreshAuthState()
             } catch (e: Exception) {
                 handleError(e)
@@ -811,15 +828,20 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
                 // Clear any existing error state
                 _errorState.value = null
                 
-                // 2. Upload to Cloud
+                // 2. Upload to Cloud (Storage + Firestore)
                 val url = accountRepository.uploadProfilePhoto(uploadUri)
                 accountRepository.updateProfile(null, null, url)
                 
-                // 3. Clear local path override once cloud URL is synced (Optional, but cleaner)
-                // settingsManager.updateLocalProfile(photoPath = null) 
+                // 3. Verification Step: Wait for the Snapshot Listener to pick up the change
+                // This ensures the loading screen stays until the cloud confirms the write
+                withTimeoutOrNull(15000) {
+                    userProfile.filter { it?.photoUrl == url }.first()
+                }
                 
+                // 4. Force refresh Auth for good measure
                 repository.refreshAuthState()
-                KeepsyLogger.i("KeepsyViewModel: Cloud sync completed")
+                
+                KeepsyLogger.i("KeepsyViewModel: Cloud sync verified and completed")
             } catch (e: Exception) {
                 KeepsyLogger.e("KeepsyViewModel: Cloud sync failed", e)
                 val msg = e.message ?: ""

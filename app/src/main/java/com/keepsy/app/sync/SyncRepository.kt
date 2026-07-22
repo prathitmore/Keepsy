@@ -27,6 +27,9 @@ class SyncRepository(
         
         KeepsyLogger.i("Starting full sync...")
         try {
+            // Repair Phase: Find items that are synced but missing cloud images
+            repairMissingCloudImages()
+            
             uploadDirtyData()
             downloadAndMergeData()
             resolveRelationships()
@@ -34,6 +37,24 @@ class SyncRepository(
         } catch (e: Exception) {
             KeepsyLogger.e("Sync failed", e)
             throw e
+        }
+    }
+
+    private suspend fun repairMissingCloudImages() {
+        val allItems = appDao.getLiveActiveItems().first()
+        for (item in allItems) {
+            if (item.photoPath != null && item.photoUrl == null) {
+                KeepsyLogger.i("SyncRepository: Repairing missing cloud image for ${item.name}")
+                appDao.updateItem(item.copy(syncState = "DIRTY"))
+            }
+        }
+        
+        val allSpaces = appDao.getLiveSpaces().first()
+        for (space in allSpaces) {
+            if (space.photoPath != null && space.photoUrl == null) {
+                KeepsyLogger.i("SyncRepository: Repairing missing cloud image for ${space.name}")
+                appDao.updateSpace(space.copy(syncState = "DIRTY"))
+            }
         }
     }
 
