@@ -440,34 +440,35 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
             // 1. Force a clean initial sync to see if there's remote data
             syncRepository.syncOnLogin()
             
-            // 1.5 Sync Local Profile Cache from Firestore immediately on login
-            val cloudProfile = firebaseService.getProfileFlow().filterNotNull().first()
-            if (cloudProfile != null) {
+            // 2. ABSOLUTE HANDSHAKE: Force fetch profile from Firestore before entering app
+            val cloudDoc = firebaseService.getProfileDocument()
+            if (cloudDoc != null) {
+                KeepsyLogger.i("KeepsyViewModel: Cloud profile handshake successful.")
                 settingsManager.updateLocalProfile(
-                    name = cloudProfile["profile_name"] as? String,
-                    displayName = cloudProfile["profile_display_name"] as? String,
-                    photoPath = cloudProfile["profile_photo_url"] as? String // We treat cloud URL as path for fallback display
+                    name = cloudDoc["profile_name"] as? String,
+                    displayName = cloudDoc["profile_display_name"] as? String,
+                    photoPath = cloudDoc["profile_photo_url"] as? String
                 )
+            } else {
+                KeepsyLogger.i("KeepsyViewModel: No cloud profile found, using Auth defaults.")
             }
             
-            // 2. Check local database for ANY existing content
+            // 3. Check local database for ANY existing content
             val spaceCount = db.appDao().getSpaceCount()
-            val itemCount = db.appDao().getDirtyItems().size + db.appDao().getLiveActiveItems().first().size
-            val hasActivity = db.appDao().getLiveActivityLogs().first().isNotEmpty()
+            val itemsInDb = db.appDao().getLiveActiveItems().first()
+            val itemCount = db.appDao().getDirtyItems().size + itemsInDb.size
             
-            if (spaceCount > 0 || itemCount > 0 || hasActivity) {
-                KeepsyLogger.i("Content found ($spaceCount spaces, $itemCount items, logs: $hasActivity), marking onboarding as completed")
+            if (spaceCount > 0 || itemCount > 0) {
+                KeepsyLogger.i("Content found ($spaceCount spaces, $itemCount items), marking onboarding as completed")
                 settingsManager.setOnboardingCompleted(true)
             } else {
-                // 3. Fallback: Check cloud profile and raw collections explicitly
+                // 4. Final Cloud Existence Check
                 val existsOnCloud = syncRepository.isUserAlreadyExistsOnCloud()
                 if (existsOnCloud) {
-                    KeepsyLogger.i("No local data but cloud data exists, marking onboarding as completed")
+                    KeepsyLogger.i("Cloud data detected, bypassing onboarding.")
                     settingsManager.setOnboardingCompleted(true)
-                    // Sync again to be absolutely sure we have the structure
-                    syncRepository.syncOnLogin()
                 } else {
-                    KeepsyLogger.i("Truly fresh user detected")
+                    KeepsyLogger.i("Truly fresh user detected.")
                     settingsManager.setOnboardingCompleted(false)
                 }
             }
