@@ -93,7 +93,7 @@ fun SpaceHorizontalCard(space: Space, onClick: () -> Unit) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = space.name,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -101,7 +101,7 @@ fun SpaceHorizontalCard(space: Space, onClick: () -> Unit) {
                 )
                 Text(
                     text = if (space.parentSpaceId != null) "Sub-space" else "Primary location",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.85f)
                 )
             }
@@ -130,7 +130,7 @@ fun ItemRowCard(itemDetails: ItemWithDetails, onClick: () -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 18.dp, horizontal = 16.dp),
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             val photoModel = remember(itemDetails.item.photoPath, itemDetails.item.photoUrl) {
@@ -176,7 +176,7 @@ fun ItemRowCard(itemDetails: ItemWithDetails, onClick: () -> Unit) {
             ) {
                 Text(
                     text = itemDetails.item.name,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -256,7 +256,7 @@ fun SpaceTreeNode(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 20.dp, horizontal = 16.dp),
+                    .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (childSpaces.isNotEmpty()) {
@@ -295,7 +295,7 @@ fun SpaceTreeNode(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = space.name,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
@@ -304,7 +304,7 @@ fun SpaceTreeNode(
                     if (space.description != null && space.description != "") {
                         Text(
                             text = space.description,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
