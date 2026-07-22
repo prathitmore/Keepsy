@@ -18,16 +18,12 @@ import com.keepsy.app.sync.SyncManager
 import com.keepsy.app.sync.SyncRepository
 import com.keepsy.app.monetization.MonetizationProvider
 import com.keepsy.app.monetization.MonetizationRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import com.keepsy.app.service.SecurityService
 import com.keepsy.app.utils.ErrorHandler
 import com.keepsy.app.utils.KeepsyError
 import com.keepsy.app.utils.KeepsyLogger
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
@@ -39,7 +35,6 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
     private val firebaseService = FirebaseService(analytics)
     private val repository = KeepsyRepository(db.appDao(), firebaseService)
     
-    // Sync components
     private val firestoreService = FirestoreService()
     private val syncRepository = SyncRepository(db.appDao(), firestoreService, firebaseService)
     val syncManager = SyncManager(application, syncRepository)
@@ -54,846 +49,325 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
     private val _errorState = MutableStateFlow<KeepsyError?>(null)
     val errorState: StateFlow<KeepsyError?> = _errorState.asStateFlow()
 
-    fun clearError() {
-        _errorState.value = null
-    }
+    fun clearError() { _errorState.value = null }
+    private fun handleError(throwable: Throwable) { _errorState.value = ErrorHandler.handleError(throwable) }
 
-    private fun handleError(throwable: Throwable) {
-        _errorState.value = ErrorHandler.handleError(throwable)
-    }
-
-    // App Preferences
     val isOnboardingCompleted = settingsManager.isOnboardingCompleted
-
     private val _isStatusChecked = MutableStateFlow(false)
     val isStatusChecked: StateFlow<Boolean> = _isStatusChecked.asStateFlow()
 
-    // Database source streams
     val spaces = repository.spaces
     val categories = repository.categories
     val tags = repository.tags
     val activityLogs = repository.activityLogs
     val activeItems = repository.activeItemsWithDetails
     val trashItems = repository.trashItemsWithDetails
-
-    // Auth state
     val authState = repository.authState
     
     private val _isRefreshingVerification = MutableStateFlow(false)
     val isRefreshingVerification: StateFlow<Boolean> = _isRefreshingVerification.asStateFlow()
 
     private suspend fun purgeLocalData() {
-        KeepsyLogger.i("Purging all local data for security identity isolation...")
         _isStatusChecked.value = false
         withContext(Dispatchers.IO) {
             try {
-                // Reset settings (onboarding, etc)
                 settingsManager.resetSettings()
-                // Clear secure data
                 securityService.clearSecureData()
-                // Wipe DB
                 db.clearAllTables()
-                // Re-seed defaults
                 repository.seedDefaultCategoriesIfEmpty()
-                KeepsyLogger.i("Local data purge complete")
-            } catch (e: Exception) {
-                KeepsyLogger.e("Purge failed", e)
-            }
+            } catch (e: Exception) { KeepsyLogger.e("Purge failed", e) }
         }
     }
 
     fun signIn(email: String, password: String) {
-        if (email.trim().isEmpty()) {
-            _errorState.value = KeepsyError.AuthError("Please enter your email address.")
-            return
-        }
-        viewModelScope.launch {
-            try {
-                // Purge before sign in to ensure clean state
-                purgeLocalData()
-                repository.signInWithEmail(email, password)
-            } catch (e: Exception) {
-                handleError(e)
-            }
-        }
+        viewModelScope.launch { try { purgeLocalData(); repository.signInWithEmail(email, password) } catch (e: Exception) { handleError(e) } }
     }
 
     fun signUp(email: String, password: String, name: String) {
-        if (email.trim().isEmpty()) {
-            _errorState.value = KeepsyError.AuthError("Please enter your email address.")
-            return
-        }
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            _errorState.value = KeepsyError.AuthError("Please enter a valid email address.")
-            return
-        }
-        viewModelScope.launch {
-            try {
-                // Purge before sign up to ensure clean state
-                purgeLocalData()
-                repository.signUpWithEmail(email, password, name)
-            } catch (e: Exception) {
-                handleError(e)
-            }
-        }
+        viewModelScope.launch { try { purgeLocalData(); repository.signUpWithEmail(email, password, name) } catch (e: Exception) { handleError(e) } }
     }
 
     fun signInWithCredential(credential: com.google.firebase.auth.AuthCredential) {
-        viewModelScope.launch {
-            try {
-                // Purge before credential sign in to ensure clean state
-                purgeLocalData()
-                repository.signInWithCredential(credential)
-            } catch (e: Exception) {
-                handleError(e)
-            }
-        }
+        viewModelScope.launch { try { purgeLocalData(); repository.signInWithCredential(credential) } catch (e: Exception) { handleError(e) } }
     }
 
     fun signOut(onComplete: () -> Unit = {}) {
         viewModelScope.launch {
             try {
                 KeepsyLogger.i("Signing out...")
-                // 1. Try a final sync
-                try {
-                    syncManager.performSync()
-                } catch (e: Exception) {
-                    KeepsyLogger.w("Final sync before logout failed: ${e.message}")
-                }
-
-                // 2. Sign out from Firebase
-                repository.signOut()
-                
-                // 3. Mandatory Security Purge
-                purgeLocalData()
-                
-                KeepsyLogger.i("Sign out complete")
-                onComplete()
-            } catch (e: Exception) {
-                KeepsyLogger.e("Sign out failed", e)
-                handleError(e)
-            }
+                try { syncManager.performSync() } catch (e: Exception) { }
+                repository.signOut(); purgeLocalData(); onComplete()
+            } catch (e: Exception) { handleError(e) }
         }
     }
 
     fun sendPasswordResetEmail(email: String, onSuccess: () -> Unit) {
-        if (email.trim().isEmpty()) {
-            _errorState.value = KeepsyError.AuthError("Please enter your email address.")
-            return
-        }
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            _errorState.value = KeepsyError.AuthError("Please enter a valid email address.")
-            return
-        }
-        viewModelScope.launch {
-            try {
-                repository.sendPasswordResetEmail(email)
-                onSuccess()
-            } catch (e: Exception) {
-                handleError(e)
-            }
-        }
+        viewModelScope.launch { try { repository.sendPasswordResetEmail(email); onSuccess() } catch (e: Exception) { handleError(e) } }
     }
 
     fun refreshVerificationStatus() {
         viewModelScope.launch {
             _isRefreshingVerification.value = true
             try {
-                val isVerified = repository.reloadUserVerification()
-                if (isVerified) {
-                    Toast.makeText(getApplication(), "Email verified successfully!", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(getApplication(), "Email not verified yet. Please check your inbox.", Toast.LENGTH_SHORT).show()
-                }
-            } catch (e: Exception) {
-                handleError(e)
-            } finally {
-                _isRefreshingVerification.value = false
-            }
+                if (repository.reloadUserVerification()) Toast.makeText(getApplication(), "Email verified!", Toast.LENGTH_SHORT).show()
+                else Toast.makeText(getApplication(), "Check your inbox.", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) { handleError(e) } finally { _isRefreshingVerification.value = false }
         }
     }
 
     fun resendVerificationEmail() {
-        viewModelScope.launch {
-            try {
-                repository.sendEmailVerification()
-                Toast.makeText(getApplication(), "Verification email resent.", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                handleError(e)
-            }
-        }
+        viewModelScope.launch { try { repository.sendEmailVerification(); Toast.makeText(getApplication(), "Sent.", Toast.LENGTH_SHORT).show() } catch (e: Exception) { handleError(e) } }
     }
 
-    fun isEmailVerified(): Boolean {
-        return repository.isEmailVerified()
-    }
+    fun isEmailVerified(): Boolean = repository.isEmailVerified()
+    fun handleExternalError(throwable: Throwable) { handleError(throwable) }
 
-    fun handleExternalError(throwable: Throwable) {
-        handleError(throwable)
-    }
-
-    // Search query backing
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
-    // Home Screen Sections
-    val recentItems = activeItems.map { list ->
-        list.sortedByDescending { it.item.createdAt }.take(10)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val recentItems = activeItems.map { it.sortedByDescending { it.item.createdAt }.take(10) }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val favoriteSpaces = spaces.map { it.filter { it.isFavorite } }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val favoriteItems = activeItems.map { it.filter { it.item.isFavorite } }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val recentlyViewedItems = activeItems.map { list ->
-        list.filter { it.item.lastViewed != null }
-            .sortedByDescending { it.item.lastViewed }
-            .take(15)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val favoriteSpaces = spaces.map { list ->
-        list.filter { it.isFavorite }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val favoriteItems = activeItems.map { list ->
-        list.filter { it.item.isFavorite }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    // Statistics state
-    val appStatistics = combine(
-        activeItems, 
-        spaces, 
-        categories,
-        trashItems,
-        tags,
-        activityLogs
-    ) { args ->
+    val appStatistics = combine(activeItems, spaces, categories, trashItems, tags, activityLogs) { args ->
         val items = args[0] as List<ItemWithDetails>
         val spacesList = args[1] as List<Space>
         val categoriesList = args[2] as List<Category>
         val trashItemsList = args[3] as List<ItemWithDetails>
         val tagsList = args[4] as List<Tag>
         val logsList = args[5] as List<ActivityLog>
+        Stats(items.size, spacesList.size, categoriesList.size, items.count { it.item.isFavorite }, trashItemsList.size, tagsList.size, logsList.size)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Stats(0, 0, 0, 0, 0, 0, 0))
 
-        val totalCount = items.size
-        val spacesCount = spacesList.size
-        val categoriesCount = categoriesList.size
-        val favoritesCount = items.count { it.item.isFavorite }
-        val trashCount = trashItemsList.size
-        val tgsCount = tagsList.size
-        val actsCount = logsList.size
-        Stats(totalCount, spacesCount, categoriesCount, favoritesCount, trashCount, tgsCount, actsCount)
-    }.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(5000),
-        Stats(0, 0, 0, 0, 0, 0, 0)
-    )
-
-    private val _refreshTrigger = MutableStateFlow(0L)
-
-    // Dashboard & Profile Logic
-    val userProfile: StateFlow<UserProfile?> = combine(
-        authState,
-        appStatistics,
-        isStatusChecked,
-        firebaseService.getProfileFlow(),
-        settingsManager.localProfileCache
-    ) { auth, stats, checked, doc, local ->
+    val userProfile: StateFlow<UserProfile?> = combine(authState, appStatistics, isStatusChecked, firebaseService.getProfileFlow(), settingsManager.localProfileCache) { auth, stats, checked, doc, local ->
         if (auth is AuthState.Authenticated) {
             val user = auth.user
-            
-            // Enterprise logic: Prioritize local cache for instant UI, merge with cloud
             val nameValue = local.name ?: (doc?.get("profile_name") as? String) ?: user.name ?: "Friend"
             val displayNameValue = local.displayName ?: (doc?.get("profile_display_name") as? String) ?: nameValue
             val photoValue = local.photoPath ?: (doc?.get("profile_photo_url") as? String) ?: user.photoUrl
-
             UserProfile(
-                uid = user.uid,
-                name = nameValue,
-                displayName = displayNameValue,
-                email = user.email ?: "",
-                photoUrl = photoValue,
-                memberSince = (doc?.get("createdAt") as? Long) ?: user.createdAt ?: System.currentTimeMillis(),
-                lastSyncAt = System.currentTimeMillis(),
-                totalItems = stats.totalItems,
-                totalSpaces = stats.totalSpaces,
-                totalCategories = stats.totalCategories,
-                totalTags = stats.tagsCount,
-                totalActivity = stats.activityCount,
-                totalTrash = stats.trashItemsCount,
-                totalFavorites = stats.favoriteItemsCount,
-                storageUsed = "1.2 MB",
-                syncEnabled = true
+                uid = user.uid, name = nameValue, displayName = displayNameValue, email = user.email ?: "", photoUrl = photoValue,
+                planType = "Free", memberSince = (doc?.get("createdAt") as? Long) ?: user.createdAt ?: System.currentTimeMillis(),
+                lastSyncAt = System.currentTimeMillis(), totalItems = stats.totalItems, totalSpaces = stats.totalSpaces,
+                totalCategories = stats.totalCategories, totalTags = stats.tagsCount, totalActivity = stats.activityCount,
+                totalTrash = stats.trashItemsCount, totalFavorites = stats.favoriteItemsCount, storageUsed = "1.2 MB",
+                syncEnabled = true, theme = "System", language = "en", notificationSettings = emptyMap(), backupFrequency = "Daily"
             )
         } else null
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    // Reactive Instant Search (sub-100ms)
-    val searchResults: StateFlow<SearchResult> = combine(
-        searchQuery,
-        activeItems,
-        spaces
-    ) { query, items, spacesList ->
-        if (query.trim().isBlank()) {
-            SearchResult(emptyList(), emptyList())
-        } else {
+    val searchResults: StateFlow<SearchResult> = combine(searchQuery, activeItems, spaces) { query, items, spacesList ->
+        if (query.trim().isBlank()) SearchResult(emptyList(), emptyList())
+        else {
             val q = query.trim().lowercase()
-
-            val filteredItems = items.filter { details ->
-                details.item.name.lowercase().contains(q) ||
-                details.item.description.lowercase().contains(q) ||
-                details.item.notes.lowercase().contains(q) ||
-                (details.space?.name?.lowercase()?.contains(q) ?: false) ||
-                (details.category?.name?.lowercase()?.contains(q) ?: false)
-            }
-
-            val filteredSpaces = spacesList.filter { space ->
-                space.name.lowercase().contains(q) ||
-                space.description.lowercase().contains(q)
-            }
-
-            SearchResult(filteredItems, filteredSpaces)
+            SearchResult(items.filter { it.item.name.lowercase().contains(q) }, spacesList.filter { it.name.lowercase().contains(q) })
         }
-    }.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(5000),
-        SearchResult(emptyList(), emptyList())
-    )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SearchResult(emptyList(), emptyList()))
 
-    // Selected Detail States for reactive presentation
     private val _selectedItem = MutableStateFlow<ItemWithDetails?>(null)
     val selectedItem: StateFlow<ItemWithDetails?> = _selectedItem
-
     private val _selectedSpace = MutableStateFlow<SpaceWithParent?>(null)
     val selectedSpace: StateFlow<SpaceWithParent?> = _selectedSpace
-
     private val _nestedSubspaces = MutableStateFlow<List<Space>>(emptyList())
     val nestedSubspaces: StateFlow<List<Space>> = _nestedSubspaces
-
     private val _itemsInSpace = MutableStateFlow<List<ItemWithDetails>>(emptyList())
     val itemsInSpace: StateFlow<List<ItemWithDetails>> = _itemsInSpace
 
     init {
-        KeepsyLogger.i("KeepsyViewModel initializing...")
         viewModelScope.launch {
             try {
                 repository.seedDefaultCategoriesIfEmpty()
-                // Start periodic sync
                 syncManager.schedulePeriodicSync()
-                // Start network observer
                 syncManager.startNetworkObservation(this)
-                
-                // Observe Auth State to trigger onboarding check automatically on login
                 authState.collect { auth ->
                     if (auth is AuthState.Authenticated) {
                         val currentUid = auth.user.uid
                         val lastCheckedUid = settingsManager.lastUserId.value
-                        
-                        if (currentUid != lastCheckedUid || !isStatusChecked.value) {
-                            checkOnboardingStatus()
-                        }
-                        // Always trigger a manual sync on successful login
+                        if (currentUid != lastCheckedUid || !isStatusChecked.value) { checkOnboardingStatus() }
                         manualSync()
-                    } else if (auth is AuthState.Unauthenticated) {
-                        _isStatusChecked.value = false
-                    }
+                    } else if (auth is AuthState.Unauthenticated) { _isStatusChecked.value = false }
                 }
-
-                KeepsyLogger.i("KeepsyViewModel initialization complete")
-            } catch (e: Exception) {
-                KeepsyLogger.e("KeepsyViewModel initialization failed", e)
-                handleError(e)
-            }
+            } catch (e: Exception) { KeepsyLogger.e("Init fail", e) }
         }
     }
 
-    // --- SEARCH HELPERS ---
-    fun updateSearchQuery(query: String) {
-        _searchQuery.value = query
-    }
+    fun updateSearchQuery(query: String) { _searchQuery.value = query }
+    suspend fun getItemWithDetails(itemId: Long): ItemWithDetails? { return repository.getItemWithDetails(itemId) }
 
-    suspend fun getItemWithDetails(itemId: Long): ItemWithDetails? {
-        return repository.getItemWithDetails(itemId)
-    }
-
-    // --- APP PREFERENCE ACTIONS ---
     private val _isRestoringData = MutableStateFlow(false)
     val isRestoringData: StateFlow<Boolean> = _isRestoringData.asStateFlow()
 
     suspend fun checkOnboardingStatus() {
-        if (_isRestoringData.value) {
-            // If already checking, wait for it to finish
-            while (_isRestoringData.value) { delay(100) }
-            return
-        }
-        
+        if (_isStatusChecked.value || _isRestoringData.value) return 
         val currentUid = firebaseService.getCurrentUser()?.uid
-        val lastUid = settingsManager.lastUserId.value
-        
-        // Identity Isolation Check
-        if (currentUid != null && lastUid != null && currentUid != lastUid) {
-            KeepsyLogger.w("Identity mismatch detected! Purging local data to prevent leakage.")
-            purgeLocalData()
-        }
-        
-        // Set the current identity
+        if (currentUid != settingsManager.lastUserId.value) purgeLocalData()
         settingsManager.setLastUserId(currentUid)
-
         _isRestoringData.value = true
         try {
-            // 1. Force a clean initial sync
-            syncRepository.syncOnLogin()
-            
-            // 2. RETRY HANDSHAKE: Attempt to fetch cloud profile up to 5 times
-            var cloudDoc: Map<String, Any?>? = null
-            for (i in 1..5) {
-                cloudDoc = firebaseService.getProfileDocument()
-                if (cloudDoc != null && cloudDoc["profile_photo_url"] != null) {
-                    KeepsyLogger.i("KeepsyViewModel: Cloud profile photo found on attempt $i")
-                    break
+            withContext(Dispatchers.IO) {
+                val syncJob = launch { syncRepository.syncOnLogin() }
+                val cloudDoc = withTimeoutOrNull(6000) {
+                    var doc: Map<String, Any?>? = null
+                    for (i in 1..4) {
+                        doc = firebaseService.getProfileDocument()
+                        if (doc?.get("profile_photo_url") != null) break
+                        delay(1000)
+                    }
+                    doc
                 }
-                delay(1500) // Wait for cloud propagation
-            }
-
-            if (cloudDoc != null) {
-                settingsManager.updateLocalProfile(
-                    name = (cloudDoc["profile_name"] as? String) ?: (cloudDoc["name"] as? String),
-                    displayName = (cloudDoc["profile_display_name"] as? String) ?: (cloudDoc["displayName"] as? String),
-                    photoPath = cloudDoc["profile_photo_url"] as? String
-                )
-            }
-            
-            // 3. Check local content for onboarding skip
-            val spaceCount = db.appDao().getSpaceCount()
-            val itemsInDb = db.appDao().getLiveActiveItems().first()
-            val itemCount = db.appDao().getDirtyItems().size + itemsInDb.size
-            
-            if (spaceCount > 0 || itemCount > 0) {
-                KeepsyLogger.i("Content found ($spaceCount spaces, $itemCount items), marking onboarding as completed")
-                settingsManager.setOnboardingCompleted(true)
-            } else {
-                // 4. Final Cloud Existence Check
-                val existsOnCloud = syncRepository.isUserAlreadyExistsOnCloud()
-                if (existsOnCloud) {
-                    KeepsyLogger.i("Cloud data detected, bypassing onboarding.")
-                    settingsManager.setOnboardingCompleted(true)
-                } else {
-                    KeepsyLogger.i("Truly fresh user detected.")
-                    settingsManager.setOnboardingCompleted(false)
+                if (cloudDoc != null) {
+                    settingsManager.updateLocalProfile(
+                        name = (cloudDoc["profile_name"] as? String) ?: (cloudDoc["name"] as? String),
+                        displayName = (cloudDoc["profile_display_name"] as? String) ?: (cloudDoc["displayName"] as? String),
+                        photoPath = cloudDoc["profile_photo_url"] as? String
+                    )
                 }
+                syncJob.join() 
+                val spaceCount = db.appDao().getSpaceCount()
+                if (spaceCount > 0) settingsManager.setOnboardingCompleted(true)
+                else settingsManager.setOnboardingCompleted(syncRepository.isUserAlreadyExistsOnCloud())
             }
-        } catch (e: Exception) {
-            KeepsyLogger.e("Failed to check onboarding status", e)
-            handleError(e)
-        } finally {
-            _isStatusChecked.value = true
-            _isRestoringData.value = false
-        }
+        } catch (e: Exception) { KeepsyLogger.e("Check fail", e) } 
+        finally { _isStatusChecked.value = true; _isRestoringData.value = false }
     }
 
-    fun setOnboardingCompleted() {
-        settingsManager.setOnboardingCompleted(true)
-        viewModelScope.launch {
-            try {
-                val data = HashMap<String, Any>()
-                data["onboardingCompleted"] = true
-                firestoreService.updateProfile(data)
-            } catch (e: Exception) { /* Non-fatal */ }
-        }
-    }
-
+    fun setOnboardingCompleted(completed: Boolean = true) { settingsManager.setOnboardingCompleted(completed) }
     fun completeOnboarding(spaceName: String, itemName: String?) {
         viewModelScope.launch {
             try {
-                // 1. Mark onboarding as done locally and on cloud IMMEDIATELY
                 settingsManager.setOnboardingCompleted(true)
-                
-                val data = HashMap<String, Any>()
-                data["onboardingCompleted"] = true
-                data["lastOnboarded"] = System.currentTimeMillis()
-                firestoreService.updateProfile(data)
-
-                // 2. Create the first space
-                saveSpace(0L, spaceName.trim(), "My primary location.", null, "home", null, true) {
-                    // Success callback
-                }
-                
-                // 3. Create the first item if provided
+                firestoreService.updateProfile(mapOf("onboardingCompleted" to true, "lastOnboarded" to System.currentTimeMillis()))
+                saveSpace(0L, spaceName.trim(), "Primary", null, "home", null, true) {}
                 if (itemName != null && itemName.trim().isNotEmpty()) {
-                    // Wait for space to be available
-                    val spacesList = spaces.first()
-                    val spaceId = spacesList.find { it.name == spaceName.trim() }?.spaceId 
-                        ?: spacesList.firstOrNull()?.spaceId ?: 1L
-                        
-                    saveItem(0L, itemName.trim(), "Saved during onboarding.", spaceId, 1L, "Welcome!", null, listOf("important"), true) {
-                        // Success callback
-                    }
+                    val sp = spaces.first(); val sid = sp.find { it.name == spaceName.trim() }?.spaceId ?: sp.firstOrNull()?.spaceId ?: 1L
+                    saveItem(0L, itemName.trim(), "First item", sid, 1L, "", null, emptyList(), true) {}
                 }
-                
-                // 4. Initial cloud sync
                 manualSync()
-            } catch (e: Exception) {
-                KeepsyLogger.e("Onboarding completion failed", e)
-            }
+            } catch (e: Exception) { KeepsyLogger.e("Onboarding complete fail", e) }
         }
     }
 
-    fun resetApp() {
-        viewModelScope.launch(Dispatchers.IO) {
-            settingsManager.resetSettings()
-            db.clearAllTables()
-            repository.seedDefaultCategoriesIfEmpty()
-        }
-    }
+    fun manualSync() { viewModelScope.launch { syncManager.performSync() } }
 
-    fun manualSync() {
-        viewModelScope.launch {
-            syncManager.performSync()
-        }
-    }
-
-    // --- ITEM ACTIONS ---
     fun selectItem(itemId: Long) {
         viewModelScope.launch {
-            val details = repository.getItemWithDetails(itemId)
-            _selectedItem.value = details
-            if (details != null) {
-                repository.trackItemViewed(itemId)
-                syncManager.performSync()
-            }
+            val d = repository.getItemWithDetails(itemId); _selectedItem.value = d
+            if (d != null) { repository.trackItemViewed(itemId); syncManager.performSync() }
         }
     }
 
-    fun saveItem(
-        itemId: Long,
-        name: String,
-        description: String,
-        spaceId: Long,
-        categoryId: Long,
-        notes: String,
-        photoUri: Uri?,
-        tagList: List<String>,
-        isFavorite: Boolean = false,
-        onSuccess: () -> Unit
-    ) {
+    fun saveItem(itemId: Long, name: String, description: String, spaceId: Long, categoryId: Long, notes: String, photoUri: Uri?, tagList: List<String>, isFavorite: Boolean = false, onSuccess: () -> Unit) {
         viewModelScope.launch {
-            val finalPhotoPath = if (photoUri != null) {
-                repository.copyImageToAppStorage(getApplication(), photoUri)
-            } else {
-                null
-            }
-
-            val existingItem = if (itemId != 0L) repository.getItemById(itemId) else null
-            val photoToSave = finalPhotoPath ?: existingItem?.photoPath
-
-            val itemToSave = Item(
-                itemId = itemId,
-                name = name,
-                description = description,
-                spaceId = spaceId,
-                categoryId = categoryId,
-                photoPath = photoToSave,
-                isFavorite = isFavorite,
-                notes = notes,
-                createdAt = existingItem?.createdAt ?: System.currentTimeMillis(),
-                updatedAt = System.currentTimeMillis(),
-                syncState = "DIRTY"
+            val path = photoUri?.let { repository.copyImageToAppStorage(getApplication(), it) }
+            val ex = if (itemId != 0L) repository.getItemById(itemId) else null
+            val item = Item(
+                itemId = itemId, name = name, description = description, spaceId = spaceId, categoryId = categoryId,
+                photoPath = path ?: ex?.photoPath, photoUrl = ex?.photoUrl,
+                createdAt = ex?.createdAt ?: System.currentTimeMillis(), updatedAt = System.currentTimeMillis(),
+                isFavorite = isFavorite, isDeleted = false, deletedAt = null, lastViewed = ex?.lastViewed,
+                notes = notes, version = (ex?.version ?: 0) + 1, syncState = "DIRTY",
+                lastSynced = ex?.lastSynced, remoteId = ex?.remoteId, spaceRemoteId = ex?.spaceRemoteId, categoryRemoteId = ex?.categoryRemoteId
             )
-
-            repository.saveItem(itemToSave, tagList)
-            onSuccess()
-            syncManager.performSync()
+            repository.saveItem(item, tagList); onSuccess(); syncManager.performSync()
         }
     }
 
     fun toggleItemFavorite(itemId: Long) {
         viewModelScope.launch {
-            val item = repository.getItemById(itemId)
-            if (item != null) {
-                val updated = item.copy(isFavorite = !item.isFavorite, updatedAt = System.currentTimeMillis(), syncState = "DIRTY")
-                db.appDao().updateItem(updated)
-                // Refresh selection state
-                _selectedItem.value = repository.getItemWithDetails(itemId)
-                syncManager.performSync()
+            val i = repository.getItemById(itemId)
+            if (i != null) {
+                db.appDao().updateItem(i.copy(isFavorite = !i.isFavorite, updatedAt = System.currentTimeMillis(), syncState = "DIRTY"))
+                _selectedItem.value = repository.getItemWithDetails(itemId); syncManager.performSync()
             }
+        }
+    }
+
+    fun selectSpace(spaceId: Long) {
+        viewModelScope.launch {
+            val s = repository.getSpaceById(spaceId)
+            if (s != null) {
+                _selectedSpace.value = SpaceWithParent(s, s.parentSpaceId?.let { repository.getSpaceById(it) })
+                _nestedSubspaces.value = db.appDao().getSubspaces(spaceId)
+                val its = db.appDao().getItemsInSpace(spaceId); val sps = db.appDao().getLiveSpaces().first(); val cats = db.appDao().getLiveCategories().first()
+                _itemsInSpace.value = its.map { ItemWithDetails(it, sps.find { sp -> sp.spaceId == it.spaceId }, cats.find { c -> c.categoryId == it.categoryId }, emptyList()) }
+            }
+        }
+    }
+
+    fun saveSpace(spaceId: Long, name: String, description: String, parentSpaceId: Long?, icon: String?, photoUri: Uri?, isFavorite: Boolean = false, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            val path = photoUri?.let { repository.copyImageToAppStorage(getApplication(), it) }
+            val ex = if (spaceId != 0L) repository.getSpaceById(spaceId) else null
+            val space = Space(
+                spaceId = spaceId, parentSpaceId = parentSpaceId, remoteId = ex?.remoteId, name = name, description = description,
+                icon = icon, photoPath = path ?: ex?.photoPath, photoUrl = ex?.photoUrl,
+                createdAt = ex?.createdAt ?: System.currentTimeMillis(), updatedAt = System.currentTimeMillis(),
+                isFavorite = isFavorite, version = (ex?.version ?: 0) + 1, syncState = "DIRTY",
+                isDeleted = false, lastSynced = ex?.lastSynced, parentRemoteId = ex?.parentRemoteId
+            )
+            if (spaceId == 0L) repository.insertSpace(space) else repository.updateSpace(space); onSuccess(); syncManager.performSync()
         }
     }
 
     fun moveItem(itemId: Long, newSpaceId: Long, reason: String, onSuccess: () -> Unit) {
-        viewModelScope.launch {
-            repository.moveItem(itemId, newSpaceId, reason)
-            // Refresh detailed states
-            _selectedItem.value = repository.getItemWithDetails(itemId)
-            onSuccess()
-            syncManager.performSync()
-        }
+        viewModelScope.launch { repository.moveItem(itemId, newSpaceId, reason); _selectedItem.value = repository.getItemWithDetails(itemId); onSuccess(); syncManager.performSync() }
     }
 
     fun softDeleteSelectedItem(onSuccess: () -> Unit) {
-        val currentId = _selectedItem.value?.item?.itemId ?: return
-        viewModelScope.launch {
-            repository.softDeleteItem(currentId)
-            _selectedItem.value = null
-            onSuccess()
-            syncManager.performSync()
-        }
+        val id = _selectedItem.value?.item?.itemId ?: return
+        viewModelScope.launch { repository.softDeleteItem(id); _selectedItem.value = null; onSuccess(); syncManager.performSync() }
     }
 
-    fun restoreItem(itemId: Long) {
-        viewModelScope.launch {
-            repository.restoreItem(itemId)
-            syncManager.performSync()
-        }
-    }
-
-    fun permanentlyDeleteItem(itemId: Long) {
-        viewModelScope.launch {
-            repository.permanentlyDeleteItem(itemId)
-            syncManager.performSync()
-        }
-    }
-
-    // --- SPACE ACTIONS ---
-    fun selectSpace(spaceId: Long) {
-        viewModelScope.launch {
-            val space = repository.getSpaceById(spaceId)
-            if (space != null) {
-                val parentSpace = space.parentSpaceId?.let { repository.getSpaceById(it) }
-                _selectedSpace.value = SpaceWithParent(space, parentSpace)
-                
-                // Get subspaces
-                val sub = db.appDao().getSubspaces(spaceId)
-                _nestedSubspaces.value = sub
-
-                // Get items in this space
-                val items = db.appDao().getItemsInSpace(spaceId)
-                val allSpaces = db.appDao().getLiveSpaces().first()
-                val allCategories = db.appDao().getLiveCategories().first()
-                
-                _itemsInSpace.value = items.map { item ->
-                    val spaceRef = allSpaces.find { it.spaceId == item.spaceId }
-                    val catRef = allCategories.find { it.categoryId == item.categoryId }
-                    ItemWithDetails(item, spaceRef, catRef, emptyList())
-                }
-            }
-        }
-    }
-
-    fun saveSpace(
-        spaceId: Long,
-        name: String,
-        description: String,
-        parentSpaceId: Long?,
-        icon: String?,
-        photoUri: Uri?,
-        isFavorite: Boolean = false,
-        onSuccess: () -> Unit
-    ) {
-        viewModelScope.launch {
-            val finalPhotoPath = if (photoUri != null) {
-                repository.copyImageToAppStorage(getApplication(), photoUri)
-            } else {
-                null
-            }
-
-            val existingSpace = if (spaceId != 0L) repository.getSpaceById(spaceId) else null
-            val photoToSave = finalPhotoPath ?: existingSpace?.photoPath
-
-            val spaceToSave = Space(
-                spaceId = spaceId,
-                parentSpaceId = parentSpaceId,
-                name = name,
-                description = description,
-                icon = icon,
-                photoPath = photoToSave,
-                isFavorite = isFavorite,
-                createdAt = existingSpace?.createdAt ?: System.currentTimeMillis(),
-                updatedAt = System.currentTimeMillis(),
-                syncState = "DIRTY"
-            )
-
-            if (spaceId == 0L) {
-                repository.insertSpace(spaceToSave)
-            } else {
-                repository.updateSpace(spaceToSave)
-            }
-            onSuccess()
-            syncManager.performSync()
-        }
-    }
-
-    fun deleteSpace(spaceId: Long, onSuccess: () -> Unit) {
-        viewModelScope.launch {
-            repository.deleteSpace(spaceId)
-            _selectedSpace.value = null
-            onSuccess()
-            syncManager.performSync()
-        }
-    }
-
+    fun restoreItem(itemId: Long) { viewModelScope.launch { repository.restoreItem(itemId); syncManager.performSync() } }
+    fun permanentlyDeleteItem(itemId: Long) { viewModelScope.launch { repository.permanentlyDeleteItem(itemId); syncManager.performSync() } }
+    fun deleteSpace(spaceId: Long, onSuccess: () -> Unit) { viewModelScope.launch { repository.deleteSpace(spaceId); _selectedSpace.value = null; onSuccess(); syncManager.performSync() } }
     fun toggleSpaceFavorite(spaceId: Long) {
         viewModelScope.launch {
-            val space = repository.getSpaceById(spaceId)
-            if (space != null) {
-                val updated = space.copy(isFavorite = !space.isFavorite, updatedAt = System.currentTimeMillis(), syncState = "DIRTY")
-                repository.updateSpace(updated)
-                // Refresh detail
-                _selectedSpace.value = SpaceWithParent(updated, updated.parentSpaceId?.let { repository.getSpaceById(it) })
-                syncManager.performSync()
+            val s = repository.getSpaceById(spaceId)
+            if (s != null) {
+                val upd = s.copy(isFavorite = !s.isFavorite, updatedAt = System.currentTimeMillis(), syncState = "DIRTY")
+                repository.updateSpace(upd); _selectedSpace.value = SpaceWithParent(upd, upd.parentSpaceId?.let { repository.getSpaceById(it) }); syncManager.performSync()
             }
         }
     }
 
-    // --- LOCAL BACKUP ACTIONS ---
     fun exportBackup(onExported: (String) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val backupJson = backupManager.exportBackupJson()
-                val backupFile = File(getApplication<Application>().cacheDir, "keepsy_backup.json")
-                FileOutputStream(backupFile).use { it.write(backupJson.toByteArray()) }
-                onExported(backupJson)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+        viewModelScope.launch { try { val json = backupManager.exportBackupJson(); val file = File(getApplication<Application>().cacheDir, "keepsy_backup.json"); FileOutputStream(file).use { it.write(json.toByteArray()) }; onExported(json) } catch (e: Exception) { } }
     }
 
-    fun importBackup(jsonString: String, onCompleted: (Boolean) -> Unit) {
-        viewModelScope.launch {
-            val success = backupManager.importBackupJson(jsonString)
-            if (success) {
-                // Seed category fallback just in case
-                repository.seedDefaultCategoriesIfEmpty()
-            }
-            onCompleted(success)
-            syncManager.performSync()
-        }
+    fun importBackup(json: String, onCompleted: (Boolean) -> Unit) {
+        viewModelScope.launch { val ok = backupManager.importBackupJson(json); if (ok) repository.seedDefaultCategoriesIfEmpty(); onCompleted(ok); syncManager.performSync() }
     }
 
-    fun getActivityTrailForItem(itemId: Long): Flow<List<ActivityLog>> {
-        return repository.getActivityTrailForItem(itemId)
-    }
-
+    fun resetApp() { viewModelScope.launch(Dispatchers.IO) { settingsManager.resetSettings(); db.clearAllTables(); repository.seedDefaultCategoriesIfEmpty() } }
+    fun getActivityTrailForItem(itemId: Long): Flow<List<ActivityLog>> = repository.getActivityTrailForItem(itemId)
     suspend fun getFullSpaceTrail(spaceId: Long): List<Space> {
-        val trail = mutableListOf<Space>()
-        var currentId: Long? = spaceId
-        
-        while (currentId != null && currentId != 0L) {
-            val space = repository.getSpaceById(currentId)
-            if (space != null) {
-                trail.add(0, space)
-                currentId = space.parentSpaceId
-            } else {
-                currentId = null
-            }
-        }
+        val trail = mutableListOf<Space>(); var cid: Long? = spaceId
+        while (cid != null && cid != 0L) { val s = repository.getSpaceById(cid); if (s != null) { trail.add(0, s); cid = s.parentSpaceId } else cid = null }
         return trail
-    }
-
-    suspend fun getFullSpacePath(spaceId: Long): String {
-        val trail = getFullSpaceTrail(spaceId)
-        return if (trail.isEmpty()) "Unknown Location" else trail.joinToString(" • ") { it.name }
     }
 
     private val _isUpdatingProfile = MutableStateFlow(false)
     val isUpdatingProfile: StateFlow<Boolean> = _isUpdatingProfile.asStateFlow()
 
-    // Account Actions
     fun updateProfile(name: String, displayName: String?) {
         viewModelScope.launch {
-            // 1. Update Local Cache (Instant UI)
-            settingsManager.updateLocalProfile(name = name, displayName = displayName)
-            
-            _isUpdatingProfile.value = true
-            try {
-                // 2. Sync with Cloud
-                val dName = displayName ?: name
-                accountRepository.updateProfile(name, dName, null)
-                
-                // 3. Verification Step
-                withTimeoutOrNull(10000) {
-                    userProfile.filter { it?.name == name && it?.displayName == dName }.first()
-                }
-
-                repository.refreshAuthState()
-            } catch (e: Exception) {
-                handleError(e)
-            } finally {
-                _isUpdatingProfile.value = false
-            }
+            settingsManager.updateLocalProfile(name = name, displayName = displayName); _isUpdatingProfile.value = true
+            try { val dn = displayName ?: name; accountRepository.updateProfile(name, dn, null); withTimeoutOrNull(10000) { userProfile.filter { it?.name == name && it?.displayName == dn }.first() }; repository.refreshAuthState() }
+            catch (e: Exception) { handleError(e) } finally { _isUpdatingProfile.value = false }
         }
     }
 
     fun updateProfilePicture(uri: Uri) {
         viewModelScope.launch {
-            // 1. Copy to local storage and update local cache (Instant UI)
-            val localPath = repository.copyImageToAppStorage(getApplication(), uri)
-            settingsManager.updateLocalProfile(photoPath = localPath)
-            
-            _isUpdatingProfile.value = true
-            try {
-                KeepsyLogger.i("KeepsyViewModel: Starting cloud sync for profile picture")
-                val compressedUri = com.keepsy.app.utils.ImageUtils.compressImage(getApplication(), uri)
-                val uploadUri = compressedUri ?: uri
-                
-                // Clear any existing error state
-                _errorState.value = null
-                
-                // 2. Upload to Cloud (Storage + Firestore)
-                val url = accountRepository.uploadProfilePhoto(uploadUri)
-                accountRepository.updateProfile(null, null, url)
-                
-                // 3. Verification Step: Wait for the Snapshot Listener to pick up the change
-                // This ensures the loading screen stays until the cloud confirms the write
-                withTimeoutOrNull(15000) {
-                    userProfile.filter { it?.photoUrl == url }.first()
-                }
-                
-                // 4. Force refresh Auth for good measure
-                repository.refreshAuthState()
-                
-                KeepsyLogger.i("KeepsyViewModel: Cloud sync verified and completed")
-            } catch (e: Exception) {
-                KeepsyLogger.e("KeepsyViewModel: Cloud sync failed", e)
-                val msg = e.message ?: ""
-                val userMessage = if (msg.contains("Object does not exist") || msg.contains("404")) {
-                    "Cloud sync latency. The photo was uploaded successfully, but it will take a moment to appear on other devices."
-                } else {
-                    e.localizedMessage ?: "Failed to sync photo to cloud"
-                }
-                _errorState.value = KeepsyError.AuthError(userMessage)
-            } finally {
-                _isUpdatingProfile.value = false
-            }
+            val lp = repository.copyImageToAppStorage(getApplication(), uri); settingsManager.updateLocalProfile(photoPath = lp); _isUpdatingProfile.value = true
+            try { val url = accountRepository.uploadProfilePhoto(com.keepsy.app.utils.ImageUtils.compressImage(getApplication(), uri) ?: uri); accountRepository.updateProfile(null, null, url); withTimeoutOrNull(15000) { userProfile.filter { it?.photoUrl == url }.first() }; repository.refreshAuthState() }
+            catch (e: Exception) { handleError(e) } finally { _isUpdatingProfile.value = false }
         }
     }
 
-    fun removeProfilePicture() {
-        viewModelScope.launch {
-            try {
-                accountRepository.deleteProfilePhoto()
-                repository.refreshAuthState()
-                _refreshTrigger.value = System.currentTimeMillis()
-            } catch (e: Exception) {
-                handleError(e)
-            }
-        }
-    }
+    fun removeProfilePicture() { viewModelScope.launch { try { accountRepository.deleteProfilePhoto(); repository.refreshAuthState() } catch (e: Exception) { handleError(e) } } }
+    fun changePassword(current: String, new: String, onSuccess: () -> Unit) { viewModelScope.launch { try { accountRepository.changePassword(current, new); onSuccess() } catch (e: Exception) { handleError(e) } } }
 
-    fun changePassword(current: String, new: String, onSuccess: () -> Unit) {
-        viewModelScope.launch {
-            try {
-                accountRepository.changePassword(current, new)
-                onSuccess()
-            } catch (e: Exception) {
-                handleError(e)
-            }
-        }
-    }
-
-    data class Stats(
-        val totalItems: Int,
-        val totalSpaces: Int,
-        val totalCategories: Int,
-        val favoriteItemsCount: Int,
-        val trashItemsCount: Int,
-        val tagsCount: Int,
-        val activityCount: Int
-    )
+    data class Stats(val totalItems: Int, val totalSpaces: Int, val totalCategories: Int, val favoriteItemsCount: Int, val trashItemsCount: Int, val tagsCount: Int, val activityCount: Int)
 }
