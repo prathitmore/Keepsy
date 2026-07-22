@@ -16,7 +16,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -34,10 +33,12 @@ import com.keepsy.app.navigation.TabScreen
 import com.keepsy.app.ui.components.AccountBottomSheet
 import com.keepsy.app.ui.components.KeepsyBackgroundEffects
 import com.keepsy.app.ui.home.HomeScreen
-import com.keepsy.app.ui.spaces.SpacesScreen
+import com.keepsy.app.ui.spaces.*
+import com.keepsy.app.ui.items.*
 import com.keepsy.app.ui.search.SearchScreen
 import com.keepsy.app.ui.activity.ActivityScreen
-import com.keepsy.app.ui.settings.SettingsScreen
+import com.keepsy.app.ui.settings.*
+import com.keepsy.app.ui.trash.TrashBinScreen
 import com.keepsy.app.ui.theme.*
 import com.keepsy.app.viewmodel.KeepsyViewModel
 
@@ -87,6 +88,14 @@ fun DashboardScaffold(
                     }
                 }
             },
+            bottomBar = {
+                if (currentSubScreen == SubScreen.None) {
+                    FloatingBottomNavigation(
+                        currentTab = currentTab,
+                        onTabSelected = onTabSelected
+                    )
+                }
+            },
             floatingActionButton = {
                 if (currentSubScreen == SubScreen.None) {
                     val showFab = when (currentTab) {
@@ -110,40 +119,36 @@ fun DashboardScaffold(
                     label = "ScreenTransition",
                     animationSpec = tween(400)
                 ) { sub ->
-                    if (sub == SubScreen.None) {
-                        AnimatedContent(
-                            targetState = currentTab,
-                            transitionSpec = {
-                                fadeIn(animationSpec = tween(300)) togetherWith 
-                                fadeOut(animationSpec = tween(300))
-                            },
-                            label = "TabTransition"
-                        ) { tab ->
-                            when (tab) {
-                                TabScreen.Home -> HomeScreen(viewModel, onTabSelected, onNavigateToSub)
-                                TabScreen.Spaces -> SpacesScreen(viewModel, onNavigateToSub)
-                                TabScreen.Search -> SearchScreen(viewModel, onNavigateToSub)
-                                TabScreen.Activity -> ActivityScreen(viewModel, onNavigateToSub)
-                                TabScreen.Settings -> SettingsScreen(viewModel, onNavigateToSub)
+                    when (sub) {
+                        SubScreen.None -> {
+                            AnimatedContent(
+                                targetState = currentTab,
+                                transitionSpec = { fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300)) },
+                                label = "TabTransition"
+                            ) { tab ->
+                                when (tab) {
+                                    TabScreen.Home -> HomeScreen(viewModel, onTabSelected, onNavigateToSub)
+                                    TabScreen.Spaces -> SpacesScreen(viewModel, onNavigateToSub)
+                                    TabScreen.Search -> SearchScreen(viewModel, onNavigateToSub)
+                                    TabScreen.Activity -> ActivityScreen(viewModel, onNavigateToSub)
+                                    TabScreen.Settings -> SettingsScreen(viewModel, onNavigateToSub)
+                                }
                             }
                         }
+                        is SubScreen.ItemDetails -> ItemDetailsScreen(sub.itemId, viewModel, onPopSub, onNavigateToSub)
+                        is SubScreen.SpaceDetails -> SpaceDetailsScreen(sub.spaceId, viewModel, onPopSub, onNavigateToSub)
+                        is SubScreen.AddEditItem -> AddEditItemScreen(sub.itemId, sub.spaceId, viewModel, onPopSub)
+                        is SubScreen.AddEditSpace -> AddEditSpaceScreen(sub.spaceId, sub.parentSpaceId, viewModel, onPopSub)
+                        is SubScreen.MoveItem -> MoveItemScreen(sub.itemId, viewModel, onPopSub)
+                        SubScreen.TrashBin -> TrashBinScreen(viewModel, onPopSub)
+                        SubScreen.Profile -> ProfileScreen(viewModel, onPopSub, onNavigateToSub)
+                        SubScreen.EditProfile -> EditProfileScreen(viewModel, onPopSub)
+                        SubScreen.BackupSync -> BackupSyncScreen(viewModel, onPopSub)
+                        SubScreen.Subscription -> SubscriptionScreen(viewModel, onPopSub)
+                        SubScreen.SecurityCenter -> SecurityScreen(viewModel, onPopSub)
+                        else -> {}
                     }
                 }
-            }
-        }
-
-        // NAVIGATION BAR - TRUE FLOATING OVERLAY
-        if (currentSubScreen == SubScreen.None) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .navigationBarsPadding(),
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                FloatingBottomNavigation(
-                    currentTab = currentTab,
-                    onTabSelected = onTabSelected
-                )
             }
         }
     }
@@ -158,16 +163,16 @@ fun PremiumTopBar(
     val title = when (currentTab) {
         TabScreen.Home -> "Dashboard"
         TabScreen.Spaces -> "Inventory Map"
-        TabScreen.Search -> "Search Everything"
-        TabScreen.Activity -> "Memory Trail"
-        TabScreen.Settings -> "System Settings"
+        TabScreen.Search -> "Search"
+        TabScreen.Activity -> "Activity"
+        TabScreen.Settings -> "Settings"
     }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
+            .padding(horizontal = 24.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -182,7 +187,7 @@ fun PremiumTopBar(
             )
             if (currentTab == TabScreen.Home) {
                 Text(
-                    text = if (profile != null) "Welcome back, ${profile.displayName}" else "Welcome back to Keepsy",
+                    text = if (profile != null) "Welcome, ${profile.displayName}" else "Welcome back",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.secondary,
                     maxLines = 1,
@@ -191,24 +196,22 @@ fun PremiumTopBar(
             }
         }
         
-        Spacer(modifier = Modifier.width(16.dp))
-
         Surface(
             modifier = Modifier
-                .size(44.dp)
+                .size(40.dp)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = onAccountClick
                 ),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(12.dp),
             color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
                     text = com.keepsy.app.utils.AvatarUtils.getInitials(profile?.name),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -243,18 +246,19 @@ fun FloatingBottomNavigation(
 
     Box(
         modifier = Modifier
-            .padding(bottom = 20.dp, start = 24.dp, end = 24.dp)
+            .navigationBarsPadding()
+            .padding(horizontal = 24.dp, vertical = 12.dp)
             .fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {
         Surface(
             modifier = Modifier
-                .height(64.dp)
-                .fillMaxWidth(0.95f), // Slightly narrower for floating feel
-            shape = RoundedCornerShape(32.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
-            shadowElevation = 16.dp
+                .height(60.dp)
+                .fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
+            shadowElevation = 8.dp
         ) {
             Row(
                 modifier = Modifier.fillMaxSize(),
@@ -264,14 +268,10 @@ fun FloatingBottomNavigation(
                 items.forEach { item ->
                     val selected = currentTab == item.tab
                     val color by animateColorAsState(
-                        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f),
+                        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f),
                         label = "icon_color"
                     )
-                    val scale by animateFloatAsState(
-                        targetValue = if (selected) 1.25f else 1f,
-                        label = "icon_scale"
-                    )
-
+                    
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -283,28 +283,12 @@ fun FloatingBottomNavigation(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = item.icon,
-                                contentDescription = null,
-                                tint = color,
-                                modifier = Modifier
-                                    .size(26.dp)
-                                    .graphicsLayer(scaleX = scale, scaleY = scale)
-                            )
-                            if (selected) {
-                                Box(
-                                    modifier = Modifier
-                                        .padding(top = 2.dp)
-                                        .size(4.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary)
-                                )
-                            }
-                        }
+                        Icon(
+                            imageVector = item.icon,
+                            contentDescription = null,
+                            tint = color,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             }
@@ -317,7 +301,7 @@ fun PremiumFAB(
     currentTab: TabScreen,
     onNavigateToSub: (SubScreen) -> Unit
 ) {
-    LargeFloatingActionButton(
+    FloatingActionButton(
         onClick = { 
             if (currentTab == TabScreen.Spaces) {
                 onNavigateToSub(SubScreen.AddEditSpace())
@@ -327,13 +311,13 @@ fun PremiumFAB(
         },
         containerColor = MaterialTheme.colorScheme.primary,
         contentColor = Color.Black,
-        shape = RoundedCornerShape(24.dp),
-        modifier = Modifier.padding(bottom = 80.dp, end = 8.dp) // Move FAB up to clear the Navbar
+        shape = CircleShape,
+        modifier = Modifier.padding(bottom = 12.dp)
     ) {
         Icon(
             imageVector = if (currentTab == TabScreen.Spaces) Icons.Default.AddHomeWork else Icons.Default.Add,
             contentDescription = "Add",
-            modifier = Modifier.size(32.dp)
+            modifier = Modifier.size(24.dp)
         )
     }
 }
@@ -347,10 +331,10 @@ fun SyncIndicator(state: SyncState) {
         exit = shrinkVertically() + fadeOut()
     ) {
         val text = when (state) {
-            SyncState.SYNCING -> "Refreshing memory..."
-            SyncState.UPLOADING -> "Saving to cloud..."
-            SyncState.DOWNLOADING -> "Fetching updates..."
-            SyncState.FAILED -> "Sync paused"
+            SyncState.SYNCING -> "Refreshing..."
+            SyncState.UPLOADING -> "Saving..."
+            SyncState.DOWNLOADING -> "Fetching..."
+            SyncState.FAILED -> "Sync Error"
             else -> ""
         }
         
@@ -365,17 +349,17 @@ fun SyncIndicator(state: SyncState) {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(color.copy(alpha = 0.1f))
-                .padding(vertical = 4.dp),
+                .padding(vertical = 2.dp),
             contentAlignment = Alignment.Center
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (state != SyncState.FAILED) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(12.dp),
+                        modifier = Modifier.size(10.dp),
                         strokeWidth = 2.dp,
                         color = color
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                 }
                 Text(
                     text = text,

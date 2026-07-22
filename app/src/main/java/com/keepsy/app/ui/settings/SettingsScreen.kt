@@ -94,6 +94,26 @@ fun SettingsScreen(viewModel: KeepsyViewModel, onNavigateToSub: (SubScreen) -> U
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
+            PremiumSettingsCard(title = "Account") {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    SettingsActionRow(
+                        icon = Icons.Default.Person,
+                        title = "My Profile",
+                        subtitle = "View and manage your account",
+                        onClick = { onNavigateToSub(SubScreen.Profile) }
+                    )
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                    SettingsActionRow(
+                        icon = Icons.Default.Edit,
+                        title = "Edit Profile",
+                        subtitle = "Update your photo and display name",
+                        onClick = { onNavigateToSub(SubScreen.EditProfile) }
+                    )
+                }
+            }
+        }
+
+        item {
             PremiumSettingsCard(title = "Data Management") {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     SettingsActionRow(

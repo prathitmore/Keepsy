@@ -54,55 +54,39 @@ fun SpaceHorizontalCard(space: Space, onClick: () -> Unit) {
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
         interactionSource = interactionSource,
         modifier = Modifier
-            .width(220.dp)
-            .height(190.dp)
+            .width(200.dp)
+            .height(170.dp)
             .graphicsLayer(scaleX = scale, scaleY = scale)
-            .shadow(16.dp, RoundedCornerShape(24.dp), spotColor = MaterialTheme.colorScheme.primary.copy(0.1f))
+            .shadow(8.dp, RoundedCornerShape(24.dp))
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (space.photoUrl != null && space.photoUrl != "") {
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(space.photoUrl)
-                        .crossfade(true)
-                        .build(),
+                    model = ImageRequest.Builder(LocalContext.current).data(space.photoUrl).crossfade(true).build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
-                Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.7f)))))
+                Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.6f)))))
             }
 
             Column(
-                modifier = Modifier.fillMaxSize().padding(24.dp),
+                modifier = Modifier.fillMaxSize().padding(16.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 if (space.photoUrl == null || space.photoUrl == "") {
                     Box(
-                        modifier = Modifier.size(56.dp).clip(RoundedCornerShape(16.dp))
-                            .background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary.copy(0.2f), MaterialTheme.colorScheme.primary.copy(0.05f)))),
+                        modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(0.1f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(imageVector = getSpaceIconVector(space.icon), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+                        Icon(imageVector = getSpaceIconVector(space.icon), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                     }
-                } else {
-                    Spacer(modifier = Modifier.height(1.dp))
-                }
+                } else { Spacer(modifier = Modifier.height(1.dp)) }
                 
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = space.name, 
-                        style = MaterialTheme.typography.titleLarge, 
-                        fontWeight = FontWeight.ExtraBold, 
-                        maxLines = 1, 
-                        overflow = TextOverflow.Ellipsis,
-                        color = if (space.photoUrl != null && space.photoUrl != "") Color.White else MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = if (space.parentSpaceId != null) "Sub-space" else "Primary location", 
-                        style = MaterialTheme.typography.bodySmall, 
-                        color = if (space.photoUrl != null && space.photoUrl != "") Color.White.copy(0.8f) else MaterialTheme.colorScheme.secondary
-                    )
+                Column {
+                    Text(text = space.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, color = if (space.photoUrl != null && space.photoUrl != "") Color.White else MaterialTheme.colorScheme.onSurface)
+                    Text(text = if (space.parentSpaceId != null) "Sub-space" else "Location", style = MaterialTheme.typography.labelSmall, color = if (space.photoUrl != null && space.photoUrl != "") Color.White.copy(0.7f) else MaterialTheme.colorScheme.secondary)
                 }
             }
         }
@@ -117,39 +101,35 @@ fun ItemRowCard(itemDetails: ItemWithDetails, onClick: () -> Unit) {
 
     Card(
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)),
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(0.6f)),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(0.05f)),
         interactionSource = interactionSource,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp).graphicsLayer(scaleX = scale, scaleY = scale)
+        modifier = Modifier.fillMaxWidth().graphicsLayer(scaleX = scale, scaleY = scale)
     ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             if (itemDetails.item.photoUrl != null && itemDetails.item.photoUrl != "") {
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(itemDetails.item.photoUrl)
-                        .crossfade(true)
-                        .build(), 
-                    contentDescription = null, 
-                    contentScale = ContentScale.Crop, 
-                    modifier = Modifier.size(80.dp).clip(RoundedCornerShape(20.dp)).border(1.dp, MaterialTheme.colorScheme.outline.copy(0.1f), RoundedCornerShape(20.dp))
+                    model = ImageRequest.Builder(LocalContext.current).data(itemDetails.item.photoUrl).crossfade(true).build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(56.dp).clip(RoundedCornerShape(12.dp))
                 )
             } else {
-                Box(modifier = Modifier.size(80.dp).clip(RoundedCornerShape(20.dp)).background(parseCategoryColor(itemDetails.category?.color).copy(0.1f)), contentAlignment = Alignment.Center) {
-                    Icon(imageVector = getSmartItemIconVector(itemDetails.item.name, itemDetails.category?.icon), contentDescription = null, tint = parseCategoryColor(itemDetails.category?.color), modifier = Modifier.size(36.dp))
+                Box(modifier = Modifier.size(56.dp).clip(RoundedCornerShape(12.dp)).background(parseCategoryColor(itemDetails.category?.color).copy(0.1f)), contentAlignment = Alignment.Center) {
+                    Icon(imageVector = getSmartItemIconVector(itemDetails.item.name, itemDetails.category?.icon), contentDescription = null, tint = parseCategoryColor(itemDetails.category?.color), modifier = Modifier.size(28.dp))
                 }
             }
-            Spacer(modifier = Modifier.width(22.dp))
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(text = itemDetails.item.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Surface(color = MaterialTheme.colorScheme.primary.copy(0.1f), shape = RoundedCornerShape(8.dp)) {
-                        Text(text = itemDetails.space?.name ?: "No location", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
-                    }
-                    Text(text = "in ${itemDetails.category?.name ?: "Other"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = itemDetails.item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(text = itemDetails.space?.name ?: "No location", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    Text(text = "•", color = MaterialTheme.colorScheme.secondary.copy(0.5f))
+                    Text(text = itemDetails.category?.name ?: "Other", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
                 }
             }
-            if (itemDetails.item.isFavorite) { Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp)) }
+            if (itemDetails.item.isFavorite) { Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)) }
         }
     }
 }
@@ -158,31 +138,30 @@ fun ItemRowCard(itemDetails: ItemWithDetails, onClick: () -> Unit) {
 fun SpaceTreeNode(space: Space, allSpaces: List<Space>, depth: Int, expandedIds: List<Long>, onNodeClick: (Long) -> Unit, onNodeDetails: (Long) -> Unit) {
     val children = remember(allSpaces, space.spaceId) { allSpaces.filter { it.parentSpaceId == space.spaceId } }
     val isExp = expandedIds.contains(space.spaceId)
-    Column(modifier = Modifier.fillMaxWidth().padding(start = (depth * 20).dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(start = (depth * 16).dp)) {
         Card(
             onClick = { onNodeDetails(space.spaceId) },
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(0.7f)),
-            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(0.5f)),
+            shape = RoundedCornerShape(12.dp),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(0.05f)),
-            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
         ) {
-            Row(modifier = Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (children.isNotEmpty()) {
-                    IconButton(onClick = { onNodeClick(space.spaceId) }, modifier = Modifier.size(40.dp)) {
-                        Icon(imageVector = if (isExp) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(28.dp))
+                    IconButton(onClick = { onNodeClick(space.spaceId) }, modifier = Modifier.size(32.dp)) {
+                        Icon(imageVector = if (isExp) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(24.dp))
                     }
-                } else { Spacer(modifier = Modifier.size(40.dp)) }
-                Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.primary.copy(0.15f)), contentAlignment = Alignment.Center) {
-                    Icon(imageVector = getSpaceIconVector(space.icon), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                } else { Spacer(modifier = Modifier.size(32.dp)) }
+                Box(modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.primary.copy(0.1f)), contentAlignment = Alignment.Center) {
+                    Icon(imageVector = getSpaceIconVector(space.icon), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                 }
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = space.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    if (space.description != "" && space.description != null) { Text(text = space.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary.copy(0.7f), maxLines = 1) }
+                    Text(text = space.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 if (children.isNotEmpty()) {
-                    Surface(color = MaterialTheme.colorScheme.primary.copy(0.1f), shape = CircleShape, modifier = Modifier.size(32.dp)) {
-                        Box(contentAlignment = Alignment.Center) { Text(text = "${children.size}", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary) }
+                    Surface(color = MaterialTheme.colorScheme.primary.copy(0.1f), shape = CircleShape, modifier = Modifier.size(24.dp)) {
+                        Box(contentAlignment = Alignment.Center) { Text(text = "${children.size}", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) }
                     }
                 }
             }
@@ -201,31 +180,23 @@ fun PremiumItemCard(itemDetails: ItemWithDetails, onClick: () -> Unit, modifier:
 
     Card(
         onClick = onClick,
-        modifier = modifier.height(200.dp).graphicsLayer(scaleX = scale, scaleY = scale).shadow(12.dp, RoundedCornerShape(24.dp)),
-        shape = RoundedCornerShape(24.dp),
+        modifier = modifier.height(160.dp).graphicsLayer(scaleX = scale, scaleY = scale),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (itemDetails.item.photoUrl != null && itemDetails.item.photoUrl != "") {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(itemDetails.item.photoUrl)
-                        .crossfade(true)
-                        .build(), 
-                    contentDescription = null, 
-                    contentScale = ContentScale.Crop, 
-                    modifier = Modifier.fillMaxSize()
-                )
-                Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.85f)))))
+                AsyncImage(model = ImageRequest.Builder(LocalContext.current).data(itemDetails.item.photoUrl).crossfade(true).build(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.7f)))))
             } else {
-                Box(modifier = Modifier.fillMaxSize().background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary.copy(0.1f), MaterialTheme.colorScheme.surface))), contentAlignment = Alignment.Center) {
-                    Icon(imageVector = getSmartItemIconVector(itemDetails.item.name, itemDetails.category?.icon), contentDescription = null, tint = parseCategoryColor(itemDetails.category?.color).copy(0.4f), modifier = Modifier.size(64.dp))
+                Box(modifier = Modifier.fillMaxSize().background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary.copy(0.05f), MaterialTheme.colorScheme.surface))), contentAlignment = Alignment.Center) {
+                    Icon(imageVector = getSmartItemIconVector(itemDetails.item.name, itemDetails.category?.icon), contentDescription = null, tint = parseCategoryColor(itemDetails.category?.color).copy(0.3f), modifier = Modifier.size(48.dp))
                 }
             }
-            Column(modifier = Modifier.align(Alignment.BottomStart).padding(24.dp)) {
-                Text(text = itemDetails.item.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = Color.White, maxLines = 1)
-                Text(text = itemDetails.space?.name ?: "No location", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.8f))
+            Column(modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)) {
+                Text(text = itemDetails.item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
+                Text(text = itemDetails.space?.name ?: "No location", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
             }
         }
     }
@@ -241,19 +212,19 @@ fun TimelineCard(log: ActivityLog, onClickItem: () -> Unit) {
     val date = remember(log.timestamp) { SimpleDateFormat("MMM dd • hh:mm a", Locale.getDefault()).format(Date(log.timestamp)) }
     val color = when (log.actionType) { "CREATED" -> SuccessGreen; "MOVED" -> WarningAmber; "DELETED" -> ErrorRed; "RESTORED" -> PrimaryAccent; else -> TextSecondary }
     val icon = when (log.actionType) { "CREATED" -> Icons.Default.Add; "MOVED" -> Icons.Default.MoveToInbox; "DELETED" -> Icons.Default.DeleteOutline; "RESTORED" -> Icons.Default.Restore; else -> Icons.Default.History }
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).clickable(enabled = log.itemId != 0L, onClick = onClickItem)) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(top = 4.dp, end = 24.dp)) {
-            Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(color.copy(0.15f)), contentAlignment = Alignment.Center) {
-                Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp).clickable(enabled = log.itemId != 0L, onClick = onClickItem)) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(top = 4.dp, end = 16.dp)) {
+            Box(modifier = Modifier.size(32.dp).clip(CircleShape).background(color.copy(0.1f)), contentAlignment = Alignment.Center) {
+                Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
             }
-            Box(modifier = Modifier.width(2.dp).height(50.dp).background(Brush.verticalGradient(listOf(color.copy(0.4f), Color.Transparent))))
+            Box(modifier = Modifier.width(1.dp).height(40.dp).background(Brush.verticalGradient(listOf(color.copy(0.3f), Color.Transparent))))
         }
-        Column(modifier = Modifier.weight(1f).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier.weight(1f).padding(bottom = 20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(text = log.actionType, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Black, color = color, letterSpacing = 1.2.sp)
-                Text(text = date, style = MaterialTheme.typography.labelSmall, color = TextSecondary.copy(0.7f))
+                Text(text = log.actionType, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Black, color = color, letterSpacing = 1.sp)
+                Text(text = date, style = MaterialTheme.typography.labelSmall, color = TextSecondary.copy(0.6f))
             }
-            Text(text = log.details, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+            Text(text = log.details, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
         }
     }
 }

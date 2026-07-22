@@ -43,7 +43,7 @@ fun ProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Account Details", fontWeight = FontWeight.Bold) },
+                title = { Text("Profile", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onPop) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -53,135 +53,116 @@ fun ProfileScreen(
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Background)
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
+        if (profile == null) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = PrimaryAccent)
+            }
+        } else {
             profile?.let { p ->
-                // Header Card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(32.dp),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceSecondary),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Background)
+                        .padding(padding)
+                        .verticalScroll(rememberScrollState())
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(20.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    // Header Card
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceSecondary),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(80.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(PrimaryPurple, PrimaryAccent)
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            modifier = Modifier.padding(20.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Layer 1: Initials (Always present)
-                            Text(
-                                text = AvatarUtils.getInitials(p.name),
-                                color = Color.White,
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                            
-                            // Layer 2: Image (Overlays initials when loaded)
-                            if (p.photoUrl != null && p.photoUrl != "") {
-                                AsyncImage(
-                                    model = p.photoUrl,
-                                    contentDescription = "Avatar",
-                                    modifier = Modifier.fillMaxSize().background(SurfaceSecondary),
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.width(20.dp))
-                        
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = p.name,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = p.email,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Surface(
-                                color = PrimaryAccent.copy(alpha = 0.1f),
-                                shape = RoundedCornerShape(8.dp)
+                            Box(
+                                modifier = Modifier
+                                    .size(70.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(PrimaryPurple, PrimaryAccent)
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = p.planType,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = PrimaryAccent,
+                                    text = AvatarUtils.getInitials(p.name),
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
                                 )
+                                
+                                if (p.photoUrl != null && p.photoUrl != "") {
+                                    AsyncImage(
+                                        model = p.photoUrl,
+                                        contentDescription = "Avatar",
+                                        modifier = Modifier.fillMaxSize().background(SurfaceSecondary),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
+                            }
+                            
+                            Spacer(modifier = Modifier.width(20.dp))
+                            
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = p.name,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = p.email,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            
+                            IconButton(onClick = { onNavigateToSub(SubScreen.EditProfile) }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Edit", tint = PrimaryAccent)
                             }
                         }
-                        
-                        Button(
-                            onClick = { onNavigateToSub(SubScreen.EditProfile) },
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent.copy(alpha = 0.1f))
-                        ) {
-                            Text("Edit", color = PrimaryAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        }
+                    }
+
+                    // Stats Grid
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        MiniStatCard("Items", p.totalItems.toString(), Icons.Default.Inventory2, Modifier.weight(1f))
+                        MiniStatCard("Spaces", p.totalSpaces.toString(), Icons.Default.Layers, Modifier.weight(1f))
+                        MiniStatCard("Favs", p.totalFavorites.toString(), Icons.Default.Star, Modifier.weight(1f))
+                    }
+
+                    // Info List
+                    InfoSection(
+                        title = "Details",
+                        items = listOf(
+                            InfoItem(Icons.Default.CalendarToday, "Member Since", formatDate(p.memberSince)),
+                            InfoItem(Icons.Default.CloudSync, "Last Synced", if (p.lastSyncAt != null) "Just now" else "Pending")
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+                    
+                    Button(
+                        onClick = { viewModel.signOut() },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = ErrorRed.copy(alpha = 0.1f)),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text("Sign Out", color = ErrorRed, fontWeight = FontWeight.Bold)
                     }
                 }
-
-                // Stats Section
-                Text("App Statistics", style = MaterialTheme.typography.titleSmall, color = TextSecondary, fontWeight = FontWeight.Bold)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    MiniStatCard("Items", p.totalItems.toString(), Icons.Default.Inventory2, Modifier.weight(1f))
-                    MiniStatCard("Spaces", p.totalSpaces.toString(), Icons.Default.Layers, Modifier.weight(1f))
-                    MiniStatCard("Favs", p.totalFavorites.toString(), Icons.Default.Star, Modifier.weight(1f))
-                }
-
-                // Details Card
-                InfoSection(
-                    title = "Account Information",
-                    items = listOf(
-                        InfoItem(Icons.Default.Person, "Full Name", p.name),
-                        InfoItem(Icons.Default.Email, "Email", p.email),
-                        InfoItem(Icons.Default.CalendarToday, "Member Since", formatDate(p.memberSince)),
-                        InfoItem(Icons.Default.Backup, "Sync Enabled", if (p.syncEnabled) "Yes" else "No")
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-                
-                Button(
-                    onClick = { viewModel.signOut() },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = ErrorRed.copy(alpha = 0.1f)),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Text("Sign Out", color = ErrorRed, fontWeight = FontWeight.Bold)
-                }
-                
-                Spacer(modifier = Modifier.height(40.dp))
             }
         }
     }
@@ -198,7 +179,7 @@ fun MiniStatCard(label: String, value: String, icon: ImageVector, modifier: Modi
         Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(icon, contentDescription = null, tint = PrimaryPurple, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.height(4.dp))
-            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
             Text(label, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
         }
     }
@@ -207,37 +188,20 @@ fun MiniStatCard(label: String, value: String, icon: ImageVector, modifier: Modi
 @Composable
 fun InfoSection(title: String, items: List<InfoItem>) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = TextSecondary,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 4.dp)
-        )
+        Text(text = title, style = MaterialTheme.typography.titleSmall, color = TextSecondary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = SurfaceSecondary),
             border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.03f))
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 items.forEach { item ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(PrimaryPurple.copy(alpha = 0.1f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(item.icon, contentDescription = null, tint = PrimaryPurple, modifier = Modifier.size(18.dp))
-                        }
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(item.icon, null, tint = PrimaryPurple.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(item.label, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, modifier = Modifier.weight(1f))
-                        Text(item.value, style = MaterialTheme.typography.bodyMedium, color = TextPrimary, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(item.value, style = MaterialTheme.typography.bodyMedium, color = TextPrimary, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -248,6 +212,6 @@ fun InfoSection(title: String, items: List<InfoItem>) {
 data class InfoItem(val icon: ImageVector, val label: String, val value: String)
 
 fun formatDate(timestamp: Long): String {
-    val sdf = SimpleDateFormat("d MMMM yyyy", Locale.getDefault())
+    val sdf = SimpleDateFormat("d MMM yyyy", Locale.getDefault())
     return sdf.format(Date(timestamp))
 }

@@ -17,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,7 +69,7 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background),
-            contentPadding = PaddingValues(bottom = 100.dp)
+            contentPadding = PaddingValues(bottom = 120.dp) // Bottom padding for navbar
         ) {
             // 1. Search Shortcut
             item {
@@ -78,150 +77,81 @@ fun HomeScreen(
                     modifier = Modifier
                         .padding(horizontal = 24.dp, vertical = 8.dp)
                         .fillMaxWidth()
-                        .height(60.dp)
-                        .clip(RoundedCornerShape(20.dp))
+                        .height(54.dp)
+                        .clip(RoundedCornerShape(16.dp))
                         .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.4f))
-                        .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)), RoundedCornerShape(20.dp))
+                        .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)), RoundedCornerShape(16.dp))
                         .clickable { 
                             viewModel.updateSearchQuery("")
                             onTabSelected(TabScreen.Search) 
                         }
-                        .padding(horizontal = 20.dp),
+                        .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Search, 
-                            contentDescription = null, 
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(
-                            text = "Search items, spaces, or notes...",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                        )
+                        Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(text = "Search everything...", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
                     }
                 }
             }
 
-            // 2. Statistics Overview
+            // 2. Statistics
             item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    if (isRestoring) {
-                        repeat(2) {
-                            Box(modifier = Modifier.weight(1f).height(110.dp).clip(RoundedCornerShape(28.dp)).shimmerLoadingAnimation())
-                        }
-                    } else {
-                        StatCard(
-                            title = "Total Items",
-                            value = stats.totalItems.toString(),
-                            icon = Icons.Default.Inventory2,
-                            modifier = Modifier.weight(1f)
-                        )
-                        StatCard(
-                            title = "Spaces",
-                            value = stats.totalSpaces.toString(),
-                            icon = Icons.Default.Layers,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
+                    StatCard(title = "Total Items", value = stats.totalItems.toString(), icon = Icons.Default.Inventory2, modifier = Modifier.weight(1f))
+                    StatCard(title = "Spaces", value = stats.totalSpaces.toString(), icon = Icons.Default.Layers, modifier = Modifier.weight(1f))
                 }
             }
 
-            // 3. Favorites Section (Pinned)
-            if (favorites.isNotEmpty() || isRestoring) {
+            // 3. Favorites Section
+            if (favorites.isNotEmpty()) {
                 item {
                     SectionHeader(
                         title = "Pinned Favorites",
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                         action = {
                             TextButton(onClick = { onTabSelected(TabScreen.Search) }) {
-                                Text("See All", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                Text("See All", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             }
                         }
                     )
                 }
                 item {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp)
-                            .padding(bottom = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        if (isRestoring) {
-                            repeat(3) {
-                                Box(modifier = Modifier.weight(1f).height(180.dp).clip(RoundedCornerShape(24.dp)).shimmerLoadingAnimation())
-                            }
-                        } else {
-                            favorites.take(3).forEach { itemDetails ->
-                                PremiumItemCard(
-                                    itemDetails = itemDetails,
-                                    onClick = { onNavigateToSub(SubScreen.ItemDetails(itemDetails.item.itemId)) },
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                            val remaining = 3 - favorites.take(3).size
-                            if (remaining > 0) {
-                                repeat(remaining) {
-                                    Spacer(modifier = Modifier.weight(1f))
-                                }
-                            }
+                        favorites.take(3).forEach { item ->
+                            PremiumItemCard(
+                                itemDetails = item,
+                                onClick = { onNavigateToSub(SubScreen.ItemDetails(item.item.itemId)) },
+                                modifier = Modifier.weight(1f)
+                            )
                         }
+                        repeat(3 - favorites.take(3).size) { Spacer(modifier = Modifier.weight(1f)) }
                     }
                 }
             }
 
-            // 4. Recently Added Section
+            // 4. Recently Added (Small Rows)
             item {
-                SectionHeader(
-                    title = "Recently Added",
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
-                )
+                SectionHeader(title = "Recently Added", modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
             }
 
             if (isRestoring) {
-                items(5) {
-                    Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)) {
-                        ItemCardShimmer()
-                    }
-                }
+                items(5) { Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)) { ItemCardShimmer() } }
             } else if (recentlyAdded.isEmpty()) {
-                item {
-                    EmptyState(
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Default.Inbox,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        },
-                        title = "No memories yet",
-                        description = "Start by remembering something important in your first space.",
-                        action = {
-                            PrimaryGradientButton(
-                                text = "Add First Item",
-                                onClick = { onNavigateToSub(SubScreen.AddEditItem()) },
-                                modifier = Modifier.width(200.dp)
-                            )
-                        }
-                    )
-                }
+                item { EmptyState(icon = { Icon(Icons.Default.Inbox, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp)) }, title = "No items yet", description = "Add your first item to start organizing.", action = { PrimaryGradientButton("Add First Item", { onNavigateToSub(SubScreen.AddEditItem()) }, Modifier.width(200.dp)) }) }
             } else {
-                items(recentlyAdded) { itemDetails ->
-                    Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)) {
-                        ItemRowCard(
-                            itemDetails = itemDetails,
-                            onClick = { onNavigateToSub(SubScreen.ItemDetails(itemDetails.item.itemId)) }
-                        )
+                items(recentlyAdded) { item ->
+                    Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)) {
+                        ItemRowCard(itemDetails = item, onClick = { onNavigateToSub(SubScreen.ItemDetails(item.item.itemId)) })
                     }
                 }
             }
@@ -230,42 +160,18 @@ fun HomeScreen(
 }
 
 @Composable
-fun StatCard(
-    title: String,
-    value: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier
-) {
+fun StatCard(title: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
     Card(
-        modifier = modifier.height(110.dp),
-        shape = RoundedCornerShape(24.dp),
+        modifier = modifier.height(90.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
+        Column(modifier = Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
             Column {
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+                Text(text = value, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                Text(text = title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
             }
         }
     }
