@@ -37,7 +37,7 @@ fun SpacesScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 12.dp)
     ) {
         if (isRestoring) {
             LazyColumn(

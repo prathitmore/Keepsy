@@ -76,7 +76,7 @@ fun HomeScreen(
             item {
                 Box(
                     modifier = Modifier
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
                         .fillMaxWidth()
                         .height(60.dp)
                         .clip(RoundedCornerShape(20.dp))
@@ -111,7 +111,7 @@ fun HomeScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     if (isRestoring) {
@@ -140,7 +140,7 @@ fun HomeScreen(
                 item {
                     SectionHeader(
                         title = "Pinned Favorites",
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
                         action = {
                             TextButton(onClick = { onTabSelected(TabScreen.Search) }) {
                                 Text("See All", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
@@ -152,7 +152,7 @@ fun HomeScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
+                            .padding(horizontal = 12.dp)
                             .padding(bottom = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
@@ -183,13 +183,13 @@ fun HomeScreen(
             item {
                 SectionHeader(
                     title = "Recently Added",
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp)
                 )
             }
 
             if (isRestoring) {
                 items(5) {
-                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                    Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
                         ItemCardShimmer()
                     }
                 }
@@ -217,7 +217,7 @@ fun HomeScreen(
                 }
             } else {
                 items(recentlyAdded) { itemDetails ->
-                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                    Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
                         ItemRowCard(
                             itemDetails = itemDetails,
                             onClick = { onNavigateToSub(SubScreen.ItemDetails(itemDetails.item.itemId)) }

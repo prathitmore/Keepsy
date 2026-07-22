@@ -23,34 +23,48 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
 
     private val auth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
-    private val storage = FirebaseStorage.getInstance()
+    private val storage = FirebaseStorage.getInstance("gs://keepsy-project.firebasestorage.app")
     private val crashlytics = FirebaseCrashlytics.getInstance()
 
     fun getCurrentUser(): User? {
-        val u = auth.currentUser ?: return null
-        return User(
-            uid = u.uid,
-            name = u.displayName,
-            email = u.email,
-            photoUrl = u.photoUrl?.toString(),
-            isAnonymous = u.isAnonymous,
-            isEmailVerified = u.isEmailVerified,
-            createdAt = u.metadata?.creationTimestamp
-        )
+        val firebaseUser = auth.currentUser
+        return firebaseUser?.let {
+            User(
+                uid = it.uid,
+                name = it.displayName,
+                email = it.email,
+                photoUrl = it.photoUrl?.toString(),
+                isAnonymous = it.isAnonymous,
+                isEmailVerified = it.isEmailVerified,
+                createdAt = it.metadata?.creationTimestamp
+            )
+        }
     }
 
     suspend fun getProfileDocument(): Map<String, Any?>? {
         val uid = auth.currentUser?.uid ?: return null
         return try {
-            val snapshot = firestore.collection("users").document(uid).get(com.google.firebase.firestore.Source.SERVER).await()
-            snapshot.data
+            firestore.collection("users").document(uid).get(com.google.firebase.firestore.Source.SERVER).await().data
         } catch (e: Exception) {
             firestore.collection("users").document(uid).get().await().data
         }
     }
 
     suspend fun updateProfile(name: String?, displayName: String?, photoUrl: String?) {
-        val uid = auth.currentUser?.uid ?: throw Exception("No Session")
+        val user = auth.currentUser ?: throw Exception("No userauthenticated")
+        
+        val profileUpdates = UserProfileChangeRequest.Builder()
+        if (name != null) profileUpdates.setDisplayName(name)
+        if (photoUrl != null && photoUrl != "") {
+            profileUpdates.setPhotoUri(Uri.parse(photoUrl))
+        }
+        
+        try {
+            user.updateProfile(profileUpdates.build()).await()
+            user.reload().await()
+        } catch (e: Exception) {
+            KeepsyLogger.e("FirebaseService: Auth sync failed", e)
+        }
         
         val updates = HashMap<String, Any?>()
         if (name != null) updates["profile_name"] = name
@@ -58,13 +72,7 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         if (photoUrl != null) updates["profile_photo_url"] = photoUrl
         
         if (updates.isNotEmpty()) {
-            firestore.collection("users").document(uid).set(updates, SetOptions.merge()).await()
-            
-            val profileUpdates = UserProfileChangeRequest.Builder()
-            if (name != null) profileUpdates.setDisplayName(name)
-            if (photoUrl != null && photoUrl != "") profileUpdates.setPhotoUri(Uri.parse(photoUrl))
-            auth.currentUser?.updateProfile(profileUpdates.build())?.await()
-            auth.currentUser?.reload()?.await()
+            firestore.collection("users").document(user.uid).set(updates, SetOptions.merge()).await()
         }
     }
 
@@ -77,21 +85,22 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
     }
 
     private suspend fun uploadImageInternal(uri: Uri, folder: String, prefix: String): String {
-        val uid = auth.currentUser?.uid ?: throw Exception("No Session")
+        val uid = auth.currentUser?.uid ?: throw Exception("No session")
         val timestamp = System.currentTimeMillis()
-        val path = "users/$uid/$folder/${prefix}_$timestamp.jpg"
-        val ref = storage.reference.child(path)
+        val storagePath = "users/$uid/$folder/${prefix}_$timestamp.jpg"
+        val ref = storage.reference.child(storagePath)
         
         try {
             val context = com.keepsy.app.KeepsyApplication.instance
             val outputStream = java.io.ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            
             val inputStream = if (uri.scheme == "content") {
                 context.contentResolver.openInputStream(uri)
             } else {
                 java.io.FileInputStream(java.io.File(uri.path ?: ""))
-            } ?: throw Exception("Stream error")
-
-            val buffer = ByteArray(8192)
+            } ?: throw Exception("Stream null")
+            
             var bytesRead: Int
             while (inputStream.read(buffer).also { bytesRead = it } != -1) {
                 outputStream.write(buffer, 0, bytesRead)
@@ -99,13 +108,18 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
             val bytes = outputStream.toByteArray()
             inputStream.close()
 
-            val metadata = StorageMetadata.Builder().setContentType("image/jpeg").build()
+            val metadata = StorageMetadata.Builder()
+                .setContentType("image/jpeg")
+                .setCustomMetadata("uid", uid)
+                .build()
+
+            KeepsyLogger.i("FirebaseService: Pushing ${bytes.size} bytes.")
             ref.putBytes(bytes, metadata).await()
             
             var downloadUrl: String? = null
-            for (i in 1..10) {
+            for (attempt in 1..10) {
                 try {
-                    delay(1000L * i)
+                    delay(1200L * attempt)
                     val url = ref.downloadUrl.await().toString()
                     if (url != "") {
                         downloadUrl = url
@@ -114,9 +128,9 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
                 } catch (e: Exception) { }
             }
             
-            return downloadUrl ?: throw Exception("Cloud link generation timeout.")
+            return downloadUrl ?: throw Exception("Indexing delay.")
         } catch (e: Exception) {
-            KeepsyLogger.e("FirebaseService: Upload pipeline failed", e)
+            KeepsyLogger.e("FirebaseService: Image pipeline fail", e)
             throw e
         }
     }
@@ -126,9 +140,8 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         updateProfile(null, null, "")
         try {
             val res = storage.reference.child("users/$uid/profile/").listAll().await()
-            val items = res.items
-            for (i in 0..items.size - 1) {
-                items[i].delete().await()
+            for (i in 0..res.items.size - 1) {
+                res.items[i].delete().await()
             }
         } catch (e: Exception) { }
     }
@@ -138,11 +151,11 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         return auth.currentUser?.isEmailVerified ?: false
     }
 
-    fun isEmailVerified() = auth.currentUser?.isEmailVerified ?: false
+    fun isEmailVerified(): Boolean = auth.currentUser?.isEmailVerified ?: false
 
     suspend fun signInWithEmail(email: String, password: String): User {
         val res = auth.signInWithEmailAndPassword(email, password).await()
-        val u = res.user ?: throw Exception("Login error")
+        val u = res.user ?: throw Exception("Login fail")
         val user = User(u.uid, u.displayName, u.email, u.photoUrl?.toString(), isAnonymous = u.isAnonymous, isEmailVerified = u.isEmailVerified)
         updateUserProfile(user)
         return user
@@ -150,9 +163,9 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
 
     suspend fun signUpWithEmail(email: String, password: String, name: String): User {
         val res = auth.createUserWithEmailAndPassword(email, password).await()
-        val u = res.user ?: throw Exception("Reg error")
-        val updates = UserProfileChangeRequest.Builder().setDisplayName(name).build()
-        u.updateProfile(updates).await()
+        val u = res.user ?: throw Exception("Reg fail")
+        val profileUpdates = UserProfileChangeRequest.Builder().setDisplayName(name).build()
+        u.updateProfile(profileUpdates).await()
         u.sendEmailVerification().await()
         val user = User(u.uid, name, u.email, isAnonymous = u.isAnonymous, isEmailVerified = u.isEmailVerified, createdAt = System.currentTimeMillis())
         updateUserProfile(user, isNewUser = true)
@@ -160,25 +173,31 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
     }
 
     suspend fun signInWithCredential(credential: AuthCredential): User {
-        val result = auth.signInWithCredential(credential).await()
-        val u = result.user ?: throw Exception("Auth error")
-        val isNew = result.additionalUserInfo?.isNewUser ?: false
+        val res = auth.signInWithCredential(credential).await()
+        val u = res.user ?: throw Exception("Login fail")
+        val isNew = res.additionalUserInfo?.isNewUser ?: false
         val user = User(u.uid, u.displayName, u.email, u.photoUrl?.toString(), isAnonymous = u.isAnonymous, isEmailVerified = u.isEmailVerified, createdAt = if (isNew) System.currentTimeMillis() else null)
-        updateUserProfile(user, isNew)
+        updateUserProfile(user, isNewUser = isNew)
         return user
     }
 
     private suspend fun updateUserProfile(user: User, isNewUser: Boolean = false) {
-        val userRef = firestore.collection("users").document(user.uid)
-        val map = HashMap<String, Any?>()
-        map["uid"] = user.uid
-        map["email"] = user.email
-        map["lastLogin"] = System.currentTimeMillis()
-        if (isNewUser) {
-            map["profile_name"] = user.name
-            map["profile_photo_url"] = user.photoUrl
-        }
-        userRef.set(map, SetOptions.merge()).await()
+        try {
+            val userRef = firestore.collection("users").document(user.uid)
+            val updates = HashMap<String, Any?>()
+            updates["uid"] = user.uid
+            updates["email"] = user.email
+            updates["lastLogin"] = System.currentTimeMillis()
+            updates["platform"] = "Android"
+            if (isNewUser) {
+                updates["createdAt"] = user.createdAt ?: System.currentTimeMillis()
+                updates["profile_name"] = user.name
+                updates["profile_display_name"] = user.name
+                updates["profile_photo_url"] = user.photoUrl
+            }
+            userRef.set(updates, SetOptions.merge()).await()
+            crashlytics.setUserId(user.uid)
+        } catch (e: Exception) { }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -187,15 +206,19 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
             if (u == null) flowOf(null)
             else callbackFlow {
                 val listener = firestore.collection("users").document(u.uid)
-                    .addSnapshotListener { snap, err ->
-                        if (err != null) { trySend(null); return@addSnapshotListener }
-                        trySend(snap?.data)
+                    .addSnapshotListener { snapshot, error ->
+                        if (error != null) {
+                            trySend(null)
+                            return@addSnapshotListener
+                        }
+                        trySend(snapshot?.data)
                     }
                 awaitClose { listener.remove() }
             }
         }
     }
-
+    
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun authStateFlow(): Flow<com.google.firebase.auth.FirebaseUser?> = callbackFlow {
         val listener = FirebaseAuth.AuthStateListener { trySend(it.currentUser) }
         auth.addAuthStateListener(listener)
@@ -214,8 +237,8 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
     }
 
     fun addAuthStateListener(listener: (User?) -> Unit) {
-        auth.addAuthStateListener { fa ->
-            val u = fa.currentUser
+        auth.addAuthStateListener { firebaseAuth ->
+            val u = firebaseAuth.currentUser
             listener(u?.let { User(it.uid, it.displayName, it.email, it.photoUrl?.toString(), isAnonymous = it.isAnonymous, isEmailVerified = it.isEmailVerified) })
         }
     }
