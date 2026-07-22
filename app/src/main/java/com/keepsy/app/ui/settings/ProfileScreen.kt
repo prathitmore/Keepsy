@@ -85,26 +85,21 @@ fun ProfileScreen(
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            var showInitials by remember(p.photoUrl) { 
-                                mutableStateOf(p.photoUrl == null || p.photoUrl == "") 
-                            }
+                            // Layer 1: Initials (Always present)
+                            Text(
+                                text = AvatarUtils.getInitials(p.name),
+                                color = Color.White,
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.ExtraBold
+                            )
                             
-                            if (!showInitials) {
+                            // Layer 2: Image (Overlays initials when loaded)
+                            if (p.photoUrl != null && p.photoUrl != "") {
                                 AsyncImage(
                                     model = p.photoUrl,
                                     contentDescription = "Avatar",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop,
-                                    onError = { showInitials = true }
-                                )
-                            }
-                            
-                            if (showInitials) {
-                                Text(
-                                    text = AvatarUtils.getInitials(p.name),
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.ExtraBold
+                                    modifier = Modifier.fillMaxSize().background(SurfaceSecondary),
+                                    contentScale = ContentScale.Crop
                                 )
                             }
                         }

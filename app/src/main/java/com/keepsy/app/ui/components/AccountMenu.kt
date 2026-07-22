@@ -75,26 +75,21 @@ fun AccountBottomSheet(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        var showInitials by remember(p.photoUrl) { 
-                            mutableStateOf(p.photoUrl == null || p.photoUrl == "") 
-                        }
+                        // Initials fallback
+                        Text(
+                            text = AvatarUtils.getInitials(p.name),
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
                         
-                        if (!showInitials) {
+                        // Image overlay
+                        if (p.photoUrl != null && p.photoUrl != "") {
                             AsyncImage(
                                 model = p.photoUrl,
                                 contentDescription = "Profile Photo",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop,
-                                onError = { showInitials = true }
-                            )
-                        }
-                        
-                        if (showInitials) {
-                            Text(
-                                text = AvatarUtils.getInitials(p.name),
-                                color = Color.White,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
+                                modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+                                contentScale = ContentScale.Crop
                             )
                         }
                     }

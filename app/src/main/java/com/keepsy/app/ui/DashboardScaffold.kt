@@ -274,26 +274,21 @@ fun PremiumTopBar(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
         ) {
             Box(contentAlignment = Alignment.Center) {
-                var showInitials by remember(profile?.photoUrl) { 
-                    mutableStateOf(profile?.photoUrl == null || profile?.photoUrl == "") 
-                }
-
-                if (!showInitials) {
+                // ALWAYS show initials as the base layer
+                Text(
+                    text = com.keepsy.app.utils.AvatarUtils.getInitials(profile?.name),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                
+                // Overlay photo if available
+                if (profile?.photoUrl != null && profile?.photoUrl != "") {
                     AsyncImage(
                         model = profile?.photoUrl,
                         contentDescription = "Account",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        onError = { showInitials = true }
-                    )
-                } 
-                
-                if (showInitials) {
-                    Text(
-                        text = com.keepsy.app.utils.AvatarUtils.getInitials(profile?.name),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
+                        contentScale = ContentScale.Crop
                     )
                 }
             }
