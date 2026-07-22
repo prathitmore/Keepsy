@@ -10,6 +10,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageMetadata
+import com.google.firebase.storage.StorageReference
 import com.keepsy.app.model.User
 import com.keepsy.app.utils.KeepsyLogger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -74,12 +75,28 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         val uid = auth.currentUser?.uid ?: throw Exception("No session")
         val timestamp = System.currentTimeMillis()
         val storagePath = "users/$uid/$folder/${prefix}_$timestamp.jpg"
-        val ref = storage.reference.child(storagePath)
         
+        return try {
+            performUpload(storage.reference.child(storagePath), uri, uid)
+        } catch (e: Exception) {
+            val msg = e.message ?: ""
+            if (msg.contains("404") || msg.contains("Object does not exist")) {
+                KeepsyLogger.w("Primary bucket failed, attempting appspot.com fallback...")
+                try {
+                    val fallbackStorage = FirebaseStorage.getInstance("gs://keepsy-project.appspot.com")
+                    return performUpload(fallbackStorage.reference.child(storagePath), uri, uid)
+                } catch (e2: Exception) {
+                    throw e2
+                }
+            } else {
+                throw e
+            }
+        }
+    }
+    
+    private suspend fun performUpload(ref: StorageReference, uri: Uri, uid: String): String {
         try {
             val context = com.keepsy.app.KeepsyApplication.instance
-            
-            // Read bytes into memory to bypass any URI permission revokes during the indexing wait
             val outputStream = ByteArrayOutputStream()
             val buffer = ByteArray(8192)
             val inputStream = context.contentResolver.openInputStream(uri) ?: throw Exception("Cannot access image data")
@@ -96,38 +113,28 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
                 .setCustomMetadata("uid", uid)
                 .build()
 
-            KeepsyLogger.i("FirebaseService: Absolute Upload Start. Path: $storagePath, Size: ${bytes.size}")
+            KeepsyLogger.i("FirebaseService: Uploading to ${ref.bucket}. Path: ${ref.path}")
             
-            // Step 1: Perform the upload and WAIT for it to be confirmed by the server
-            // Using resumable upload session manually for more stability if needed, 
-            // but putBytes with custom metadata is usually fine.
             ref.putBytes(bytes, metadata).await()
             
-            KeepsyLogger.i("FirebaseService: Bytes accepted by server. Starting Indexing-Wait.")
-            
-            // Step 2: Aggressive Indexing Loop with verified existence check.
-            // Retrying for up to 60 seconds (30 cycles)
             var downloadUrl: String? = null
-            for (attempt in 1..40) {
+            for (attempt in 1..30) {
                 try {
                     delay(1500L)
-                    // Check if object exists first to avoid 404 throwing exception if possible
-                    ref.metadata.await() 
-                    
                     val url = ref.downloadUrl.await().toString()
                     if (url != "") {
                         downloadUrl = url
-                        KeepsyLogger.i("FirebaseService: URL Indexing Success on attempt $attempt")
+                        KeepsyLogger.i("FirebaseService: Success on attempt $attempt")
                         break
                     }
                 } catch (e: Exception) {
-                    KeepsyLogger.w("FirebaseService: Waiting for cloud link... ($attempt/40) - ${e.message}")
+                    KeepsyLogger.w("FirebaseService: Indexing... ($attempt/30)")
                 }
             }
             
-            return downloadUrl ?: throw Exception("The image was uploaded, but the cloud link failed to generate. Please refresh in a moment.")
+            return downloadUrl ?: throw Exception("Cloud link generation timeout.")
         } catch (e: Exception) {
-            KeepsyLogger.e("FirebaseService: Cloud Pipeline Failure", e)
+            KeepsyLogger.e("FirebaseService: Upload Core Failure", e)
             throw e
         }
     }

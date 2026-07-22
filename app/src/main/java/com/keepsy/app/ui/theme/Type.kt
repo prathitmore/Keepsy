@@ -52,9 +52,9 @@ val Typography = Typography(
     ),
     titleLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Bold,
-        fontSize = 18.sp,
-        lineHeight = 26.sp,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 20.sp,
+        lineHeight = 28.sp,
         letterSpacing = 0.sp
     ),
     titleMedium = TextStyle(
