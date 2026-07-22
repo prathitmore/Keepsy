@@ -79,10 +79,7 @@ fun DashboardScaffold(
                     }
                 }
             },
-            bottomBar = {
-                // FIXED: Removed the bottomBar slot completely to prevent double navbars
-                // We use the Floating overlay below instead.
-            },
+            bottomBar = {},
             floatingActionButton = {
                 if (currentSubScreen == SubScreen.None) {
                     val showFab = when (currentTab) {
@@ -101,60 +98,79 @@ fun DashboardScaffold(
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                Crossfade(
+                // FIXED: Replaced Crossfade with AnimatedContent and targetContentZIndex 
+                // to eliminate "Ghosting" artifacts.
+                AnimatedContent(
                     targetState = currentSubScreen,
                     label = "ScreenTransition",
-                    animationSpec = tween(
-                        durationMillis = 350,
-                        easing = FastOutSlowInEasing
-                    )
-                ) { sub ->
-                    when (sub) {
-                        SubScreen.None -> {
-                            AnimatedContent(
-                                targetState = currentTab,
-                                transitionSpec = {
-                                    (fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) + 
-                                     scaleIn(initialScale = 0.96f, animationSpec = tween(250, easing = LinearOutSlowInEasing)))
-                                    .togetherWith(
-                                        fadeOut(animationSpec = tween(200, easing = FastOutLinearInEasing))
-                                    )
-                                },
-                                label = "TabTransition"
-                            ) { tab ->
-                                when (tab) {
-                                    TabScreen.Home -> HomeScreen(viewModel, onTabSelected, onNavigateToSub)
-                                    TabScreen.Spaces -> SpacesScreen(viewModel, onNavigateToSub)
-                                    TabScreen.Search -> SearchScreen(viewModel, onNavigateToSub)
-                                    TabScreen.Activity -> ActivityScreen(viewModel, onNavigateToSub)
-                                    TabScreen.Settings -> SettingsScreen(viewModel, onNavigateToSub)
-                                }
+                    transitionSpec = {
+                        val isOpening = targetState != SubScreen.None
+                        if (isOpening) {
+                            (fadeIn(animationSpec = tween(300)) + 
+                             scaleIn(initialScale = 0.98f, animationSpec = tween(300)))
+                            .togetherWith(
+                                fadeOut(animationSpec = tween(150))
+                            ).apply {
+                                targetContentZIndex = 1f // Ensure new content is on top
+                            }
+                        } else {
+                            fadeIn(animationSpec = tween(200))
+                            .togetherWith(
+                                (fadeOut(animationSpec = tween(300)) + 
+                                 scaleOut(targetScale = 0.98f, animationSpec = tween(300)))
+                            ).apply {
+                                targetContentZIndex = -1f // Ensure old content slides away
                             }
                         }
-                        SubScreen.AccountCenter -> AccountCenterScreen(
-                            profile = profile,
-                            onPop = onPopSub,
-                            onNavigateToSub = onNavigateToSub,
-                            onSignOut = { viewModel.signOut() }
-                        )
-                        is SubScreen.ItemDetails -> ItemDetailsScreen(sub.itemId, viewModel, onPopSub, onNavigateToSub)
-                        is SubScreen.SpaceDetails -> SpaceDetailsScreen(sub.spaceId, viewModel, onPopSub, onNavigateToSub)
-                        is SubScreen.AddEditItem -> AddEditItemScreen(sub.itemId, sub.spaceId, viewModel, onPopSub)
-                        is SubScreen.AddEditSpace -> AddEditSpaceScreen(sub.spaceId, sub.parentSpaceId, viewModel, onPopSub)
-                        is SubScreen.MoveItem -> MoveItemScreen(sub.itemId, viewModel, onPopSub)
-                        SubScreen.TrashBin -> TrashBinScreen(viewModel, onPopSub)
-                        SubScreen.Profile -> ProfileScreen(viewModel, onPopSub, onNavigateToSub)
-                        SubScreen.EditProfile -> EditProfileScreen(viewModel, onPopSub)
-                        SubScreen.BackupSync -> BackupSyncScreen(viewModel, onPopSub)
-                        SubScreen.Subscription -> SubscriptionScreen(viewModel, onPopSub)
-                        SubScreen.SecurityCenter -> SecurityScreen(viewModel, onPopSub)
-                        else -> {}
+                    }
+                ) { sub ->
+                    // Add a solid background to each screen container to prevent "seeing through"
+                    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                        when (sub) {
+                            SubScreen.None -> {
+                                AnimatedContent(
+                                    targetState = currentTab,
+                                    transitionSpec = {
+                                        fadeIn(animationSpec = tween(200, easing = LinearEasing))
+                                        .togetherWith(
+                                            fadeOut(animationSpec = tween(100, easing = LinearEasing))
+                                        )
+                                    },
+                                    label = "TabTransition"
+                                ) { tab ->
+                                    when (tab) {
+                                        TabScreen.Home -> HomeScreen(viewModel, onTabSelected, onNavigateToSub)
+                                        TabScreen.Spaces -> SpacesScreen(viewModel, onNavigateToSub)
+                                        TabScreen.Search -> SearchScreen(viewModel, onNavigateToSub)
+                                        TabScreen.Activity -> ActivityScreen(viewModel, onNavigateToSub)
+                                        TabScreen.Settings -> SettingsScreen(viewModel, onNavigateToSub)
+                                    }
+                                }
+                            }
+                            SubScreen.AccountCenter -> AccountCenterScreen(
+                                profile = profile,
+                                onPop = onPopSub,
+                                onNavigateToSub = onNavigateToSub,
+                                onSignOut = { viewModel.signOut() }
+                            )
+                            is SubScreen.ItemDetails -> ItemDetailsScreen(sub.itemId, viewModel, onPopSub, onNavigateToSub)
+                            is SubScreen.SpaceDetails -> SpaceDetailsScreen(sub.spaceId, viewModel, onPopSub, onNavigateToSub)
+                            is SubScreen.AddEditItem -> AddEditItemScreen(sub.itemId, sub.spaceId, viewModel, onPopSub)
+                            is SubScreen.AddEditSpace -> AddEditSpaceScreen(sub.spaceId, sub.parentSpaceId, viewModel, onPopSub)
+                            is SubScreen.MoveItem -> MoveItemScreen(sub.itemId, viewModel, onPopSub)
+                            SubScreen.TrashBin -> TrashBinScreen(viewModel, onPopSub)
+                            SubScreen.Profile -> ProfileScreen(viewModel, onPopSub, onNavigateToSub)
+                            SubScreen.EditProfile -> EditProfileScreen(viewModel, onPopSub)
+                            SubScreen.BackupSync -> BackupSyncScreen(viewModel, onPopSub)
+                            SubScreen.Subscription -> SubscriptionScreen(viewModel, onPopSub)
+                            SubScreen.SecurityCenter -> SecurityScreen(viewModel, onPopSub)
+                            else -> {}
+                        }
                     }
                 }
             }
         }
 
-        // NAVIGATION BAR - TRUE FLOATING OVERLAY (Keep this one)
         if (currentSubScreen == SubScreen.None) {
             Box(
                 modifier = Modifier
