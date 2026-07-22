@@ -74,37 +74,36 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
     suspend fun uploadEntityImage(uri: Uri, collection: String, entityName: String): String { return uploadImageInternal(uri, collection, entityName) }
 
     private suspend fun uploadImageInternal(uri: Uri, folder: String, prefix: String): String {
-        val uid = auth.currentUser?.uid ?: throw Exception("Not logged in")
+        val currentUser = auth.currentUser ?: throw Exception("Auth session missing")
+        val uid = currentUser.uid
         val timestamp = System.currentTimeMillis()
-        val fileName = prefix + "_" + timestamp.toString() + ".jpg"
+        val fileName = prefix + "_" + timestamp + ".jpg"
         
         val context = com.keepsy.app.KeepsyApplication.instance
-        val tempFile = File(context.cacheDir, "staging.jpg")
+        val tempFile = File(context.cacheDir, "temp_upload.jpg")
         
         try {
-            val input = context.contentResolver.openInputStream(uri) ?: throw Exception("No input")
+            val input = context.contentResolver.openInputStream(uri) ?: throw Exception("Input unreadable")
             val output = FileOutputStream(tempFile)
-            val buffer = ByteArray(16384)
-            var bytesRead: Int
-            while (input.read(buffer).also { bytesRead = it } != -1) {
-                output.write(buffer, 0, bytesRead)
-            }
+            val buf = ByteArray(16384)
+            var n: Int
+            while (input.read(buf).also { n = it } != -1) { output.write(buf, 0, n) }
             output.flush()
             output.close()
             input.close()
         } catch (e: Exception) {
-            throw Exception("Local copy failed: " + e.message)
+            throw Exception("Local processing error: " + e.message)
         }
 
-        // NO LEADING SLASHES. ONLY RELATIVE.
+        // NO LEADING SLASHES. ONLY RELATIVE CHILD CHAINING.
         val ref = storage.reference.child("users").child(uid).child(folder).child(fileName)
 
-        KeepsyLogger.i("FirebaseService: V9.2 - Final Standard Path Logic")
+        KeepsyLogger.i("FirebaseService: V9.3 Standard Logic")
         KeepsyLogger.i("Target Bucket: " + ref.bucket)
         KeepsyLogger.i("Target Path: " + ref.path)
 
         try {
-            // Use putFile which is the most stable for large objects and resumable sessions
+            // Use putFile with the standard Uri
             withTimeout(60000L) {
                 ref.putFile(Uri.fromFile(tempFile)).await()
             }
@@ -112,19 +111,20 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
             KeepsyLogger.i("FirebaseService: PutFile successful. Polling...")
             
             var downloadUrl: String? = null
-            for (i in 1..20) {
+            for (attempt in 1..20) {
                 try {
                     delay(1500L)
                     val url = ref.downloadUrl.await().toString()
                     if (url != "") {
                         downloadUrl = url
+                        KeepsyLogger.i("FirebaseService: Verified link: " + url)
                         break
                     }
                 } catch (e: Exception) { }
             }
             
             if (tempFile.exists()) tempFile.delete()
-            return downloadUrl ?: throw Exception("Timeout generating link")
+            return downloadUrl ?: throw Exception("indexing timeout")
 
         } catch (e: Exception) {
             KeepsyLogger.e("FirebaseService: PutFile Failed: " + e.message)
@@ -164,17 +164,13 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         return user
     }
 
-    suspend fun signUpWithCredential(credential: AuthCredential): User {
+    suspend fun signInWithCredential(credential: AuthCredential): User {
         val res = auth.signInWithCredential(credential).await()
         val u = res.user ?: throw Exception("Login fail")
         val isNew = res.additionalUserInfo?.isNewUser ?: false
         val user = User(u.uid, u.displayName, u.email, u.photoUrl?.toString(), isAnonymous = u.isAnonymous, isEmailVerified = u.isEmailVerified, createdAt = if (isNew) System.currentTimeMillis() else null)
         updateUserProfile(user, isNewUser = isNew)
         return user
-    }
-    
-    suspend fun signInWithCredential(credential: AuthCredential): User {
-        return signUpWithCredential(credential)
     }
 
     private suspend fun updateUserProfile(user: User, isNewUser: Boolean = false) {
