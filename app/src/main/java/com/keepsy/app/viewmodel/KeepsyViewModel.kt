@@ -437,23 +437,29 @@ class KeepsyViewModel(application: Application) : AndroidViewModel(application) 
 
         _isRestoringData.value = true
         try {
-            // 1. Force a clean initial sync to see if there's remote data
+            // 1. Force a clean initial sync
             syncRepository.syncOnLogin()
             
-            // 2. ABSOLUTE HANDSHAKE: Force fetch profile from Firestore before entering app
-            val cloudDoc = firebaseService.getProfileDocument()
+            // 2. RETRY HANDSHAKE: Attempt to fetch cloud profile up to 5 times
+            var cloudDoc: Map<String, Any?>? = null
+            for (i in 1..5) {
+                cloudDoc = firebaseService.getProfileDocument()
+                if (cloudDoc != null && cloudDoc["profile_photo_url"] != null) {
+                    KeepsyLogger.i("KeepsyViewModel: Cloud profile photo found on attempt $i")
+                    break
+                }
+                delay(1500) // Wait for cloud propagation
+            }
+
             if (cloudDoc != null) {
-                KeepsyLogger.i("KeepsyViewModel: Cloud profile handshake successful.")
                 settingsManager.updateLocalProfile(
-                    name = cloudDoc["profile_name"] as? String,
-                    displayName = cloudDoc["profile_display_name"] as? String,
+                    name = (cloudDoc["profile_name"] as? String) ?: (cloudDoc["name"] as? String),
+                    displayName = (cloudDoc["profile_display_name"] as? String) ?: (cloudDoc["displayName"] as? String),
                     photoPath = cloudDoc["profile_photo_url"] as? String
                 )
-            } else {
-                KeepsyLogger.i("KeepsyViewModel: No cloud profile found, using Auth defaults.")
             }
             
-            // 3. Check local database for ANY existing content
+            // 3. Check local content for onboarding skip
             val spaceCount = db.appDao().getSpaceCount()
             val itemsInDb = db.appDao().getLiveActiveItems().first()
             val itemCount = db.appDao().getDirtyItems().size + itemsInDb.size

@@ -85,7 +85,7 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
     }
 
     private suspend fun uploadImageInternal(uri: Uri, folder: String, prefix: String): String {
-        val uid = auth.currentUser?.uid ?: throw Exception("No session")
+        val uid = auth.currentUser?.uid ?: throw Exception("No user session")
         val timestamp = System.currentTimeMillis()
         val storagePath = "users/$uid/$folder/${prefix}_$timestamp.jpg"
         val ref = storage.reference.child(storagePath)
@@ -99,7 +99,7 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
                 context.contentResolver.openInputStream(uri)
             } else {
                 java.io.FileInputStream(java.io.File(uri.path ?: ""))
-            } ?: throw Exception("Stream null")
+            } ?: throw Exception("File access failure")
             
             var bytesRead: Int
             while (inputStream.read(buffer).also { bytesRead = it } != -1) {
@@ -113,24 +113,27 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
                 .setCustomMetadata("uid", uid)
                 .build()
 
-            KeepsyLogger.i("FirebaseService: Pushing ${bytes.size} bytes.")
+            KeepsyLogger.i("FirebaseService: Pushing ${bytes.size} bytes...")
             ref.putBytes(bytes, metadata).await()
             
+            // Hardened cloud propagation check
             var downloadUrl: String? = null
-            for (attempt in 1..10) {
+            for (attempt in 1..12) {
                 try {
-                    delay(1200L * attempt)
+                    delay(1200L)
                     val url = ref.downloadUrl.await().toString()
                     if (url != "") {
                         downloadUrl = url
                         break
                     }
-                } catch (e: Exception) { }
+                } catch (e: Exception) {
+                    KeepsyLogger.w("FirebaseService: Waiting for cloud indexing... ($attempt/12)")
+                }
             }
             
-            return downloadUrl ?: throw Exception("Indexing delay.")
+            return downloadUrl ?: throw Exception("Cloud link generation timeout.")
         } catch (e: Exception) {
-            KeepsyLogger.e("FirebaseService: Image pipeline fail", e)
+            KeepsyLogger.e("FirebaseService: Critical upload failure", e)
             throw e
         }
     }
