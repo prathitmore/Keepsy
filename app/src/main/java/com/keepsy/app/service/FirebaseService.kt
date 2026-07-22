@@ -10,7 +10,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageMetadata
-import com.google.firebase.storage.StorageReference
 import com.keepsy.app.model.User
 import com.keepsy.app.utils.KeepsyLogger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -76,9 +75,9 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
         val timestamp = System.currentTimeMillis()
         val storagePath = "users/$uid/$folder/${prefix}_$timestamp.jpg"
         
-        // Load bytes once
         val context = com.keepsy.app.KeepsyApplication.instance
-        val inputStream = context.contentResolver.openInputStream(uri) ?: throw Exception("Cannot open image")
+        val inputStream = context.contentResolver.openInputStream(uri) ?: throw Exception("Cannot access image")
+        
         val outputStream = ByteArrayOutputStream()
         val buffer = ByteArray(8192)
         var bytesRead: Int
@@ -90,61 +89,57 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
 
         val metadata = StorageMetadata.Builder()
             .setContentType("image/jpeg")
+            .setCustomMetadata("uid", uid)
             .build()
 
-        // 1. Try the default bucket from google-services.json
-        return try {
-            val defaultBucket = storage.app.options.storageBucket ?: ""
-            KeepsyLogger.i("Attempting upload to default bucket: $defaultBucket")
-            executeUpload(storage.reference.child(storagePath), bytes, metadata)
-        } catch (e: Exception) {
-            val errorMsg = e.message ?: ""
-            if (errorMsg.contains("404") || errorMsg.contains("not exist") || errorMsg.contains("terminated")) {
-                KeepsyLogger.w("Default bucket failed with 404/terminated. Trying legacy fallback...")
-                try {
-                    // 2. Fallback to common legacy format
-                    val fallbackStorage = FirebaseStorage.getInstance("gs://keepsy-project.appspot.com")
-                    executeUpload(fallbackStorage.reference.child(storagePath), bytes, metadata)
-                } catch (e2: Exception) {
-                    // 3. Last ditch: Try bucket name as just the project ID
-                    KeepsyLogger.w("Legacy fallback failed. Trying project-id bucket...")
-                    try {
-                        val lastDitchStorage = FirebaseStorage.getInstance("gs://keepsy-project")
-                        executeUpload(lastDitchStorage.reference.child(storagePath), bytes, metadata)
-                    } catch (e3: Exception) {
-                        KeepsyLogger.e("All storage buckets failed.", e3)
-                        throw e3
-                    }
-                }
-            } else {
-                KeepsyLogger.e("Upload failed with non-404 error", e)
-                throw e
-            }
-        }
-    }
-    
-    private suspend fun executeUpload(ref: StorageReference, bytes: ByteArray, metadata: StorageMetadata): String {
-        // Use a non-resumable upload for small images to avoid session termination errors
-        // We do this by ensuring the upload is done in one go if possible
-        val uploadTask = ref.putBytes(bytes, metadata)
-        uploadTask.await()
-        
-        // Indexing wait loop
-        var downloadUrl: String? = null
-        for (i in 1..20) {
+        val buckets = listOf(
+            "keepsy-project.firebasestorage.app",
+            "keepsy-project.appspot.com",
+            "keepsy-project"
+        )
+
+        var lastException: Exception? = null
+
+        for (bucketName in buckets) {
             try {
-                delay(1000)
-                val url = ref.downloadUrl.await().toString()
-                if (url != "") {
-                    downloadUrl = url
-                    KeepsyLogger.i("Cloud link verified: $url")
-                    break
+                KeepsyLogger.i("FirebaseService: Attempting upload to bucket: $bucketName")
+                val currentStorage = try {
+                    FirebaseStorage.getInstance("gs://$bucketName")
+                } catch (e: Exception) {
+                    storage
                 }
+                
+                // Manual check for leading slash
+                val cleanPath = if (storagePath.length > 0 && storagePath[0] == '/') {
+                    storagePath.substring(1)
+                } else {
+                    storagePath
+                }
+                
+                val ref = currentStorage.reference.child(cleanPath)
+                ref.putBytes(bytes, metadata).await()
+                
+                KeepsyLogger.i("FirebaseService: Bytes accepted by $bucketName. Polling for URL...")
+                
+                for (attempt in 1..25) {
+                    try {
+                        delay(1200)
+                        val url = ref.downloadUrl.await().toString()
+                        if (url != "") {
+                            KeepsyLogger.i("FirebaseService: Success on bucket $bucketName")
+                            return url
+                        }
+                    } catch (e: Exception) { }
+                }
+                
+                throw Exception("Upload succeeded but URL generation timed out.")
             } catch (e: Exception) {
-                KeepsyLogger.w("Waiting for indexing... ($i/20)")
+                lastException = e
+                KeepsyLogger.w("FirebaseService: Bucket $bucketName failed: ${e.message}")
             }
         }
-        return downloadUrl ?: throw Exception("Object stored but download link failed.")
+
+        throw lastException ?: Exception("Storage pipeline collapsed across all buckets.")
     }
 
     suspend fun deleteProfilePicture() {
