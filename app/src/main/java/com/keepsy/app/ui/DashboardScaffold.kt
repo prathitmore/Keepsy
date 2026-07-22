@@ -239,7 +239,7 @@ fun PremiumTopBar(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -412,7 +412,7 @@ fun PremiumFAB(
         contentColor = Color.White,
         modifier = Modifier
             .navigationBarsPadding()
-            .padding(bottom = 80.dp)
+            .padding(bottom = 24.dp)
             .graphicsLayer(scaleX = scale, scaleY = scale)
             .shadow(12.dp, CircleShape, spotColor = PrimaryAccent.copy(alpha = 0.5f))
     ) {

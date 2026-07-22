@@ -130,7 +130,7 @@ fun ItemRowCard(itemDetails: ItemWithDetails, onClick: () -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(vertical = 18.dp, horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             val photoModel = remember(itemDetails.item.photoPath, itemDetails.item.photoUrl) {
@@ -256,7 +256,7 @@ fun SpaceTreeNode(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(14.dp),
+                    .padding(vertical = 20.dp, horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (childSpaces.isNotEmpty()) {
