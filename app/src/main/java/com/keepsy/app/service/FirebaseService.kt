@@ -71,75 +71,56 @@ class FirebaseService(private val analytics: FirebaseAnalytics) {
     suspend fun uploadEntityImage(uri: Uri, collection: String, entityName: String): String { return uploadImageInternal(uri, collection, entityName) }
 
     private suspend fun uploadImageInternal(uri: Uri, folder: String, prefix: String): String {
-        val uid = auth.currentUser?.uid ?: throw Exception("No session")
+        val user = auth.currentUser ?: throw Exception("No session")
+        val uid = user.uid
         val timestamp = System.currentTimeMillis()
         val storagePath = "users/$uid/$folder/${prefix}_$timestamp.jpg"
         
-        val context = com.keepsy.app.KeepsyApplication.instance
-        val inputStream = context.contentResolver.openInputStream(uri) ?: throw Exception("Cannot access image")
-        
-        val outputStream = ByteArrayOutputStream()
-        val buffer = ByteArray(8192)
-        var bytesRead: Int
-        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-            outputStream.write(buffer, 0, bytesRead)
-        }
-        val bytes = outputStream.toByteArray()
-        inputStream.close()
-
-        val metadata = StorageMetadata.Builder()
-            .setContentType("image/jpeg")
-            .setCustomMetadata("uid", uid)
-            .build()
-
-        val buckets = listOf(
-            "keepsy-project.firebasestorage.app",
-            "keepsy-project.appspot.com",
-            "keepsy-project"
-        )
-
-        var lastException: Exception? = null
-
-        for (bucketName in buckets) {
-            try {
-                KeepsyLogger.i("FirebaseService: Attempting upload to bucket: $bucketName")
-                val currentStorage = try {
-                    FirebaseStorage.getInstance("gs://$bucketName")
-                } catch (e: Exception) {
-                    storage
-                }
-                
-                // Manual check for leading slash
-                val cleanPath = if (storagePath.length > 0 && storagePath[0] == '/') {
-                    storagePath.substring(1)
-                } else {
-                    storagePath
-                }
-                
-                val ref = currentStorage.reference.child(cleanPath)
-                ref.putBytes(bytes, metadata).await()
-                
-                KeepsyLogger.i("FirebaseService: Bytes accepted by $bucketName. Polling for URL...")
-                
-                for (attempt in 1..25) {
-                    try {
-                        delay(1200)
-                        val url = ref.downloadUrl.await().toString()
-                        if (url != "") {
-                            KeepsyLogger.i("FirebaseService: Success on bucket $bucketName")
-                            return url
-                        }
-                    } catch (e: Exception) { }
-                }
-                
-                throw Exception("Upload succeeded but URL generation timed out.")
-            } catch (e: Exception) {
-                lastException = e
-                KeepsyLogger.w("FirebaseService: Bucket $bucketName failed: ${e.message}")
+        try {
+            val context = com.keepsy.app.KeepsyApplication.instance
+            val inputStream = context.contentResolver.openInputStream(uri) ?: throw Exception("Cannot access image data")
+            
+            val outputStream = ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            var bytesRead: Int
+            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                outputStream.write(buffer, 0, bytesRead)
             }
-        }
+            val bytes = outputStream.toByteArray()
+            inputStream.close()
 
-        throw lastException ?: Exception("Storage pipeline collapsed across all buckets.")
+            val metadata = StorageMetadata.Builder()
+                .setContentType("image/jpeg")
+                .build()
+
+            val ref = storage.reference.child(storagePath)
+            
+            KeepsyLogger.i("FirebaseService: Standard Upload to ${ref.bucket}. Path: ${ref.path}")
+            
+            ref.putBytes(bytes, metadata).await()
+            
+            KeepsyLogger.i("FirebaseService: Upload finished. Validating link...")
+            
+            var downloadUrl: String? = null
+            for (attempt in 1..25) {
+                try {
+                    delay(1200L)
+                    val url = ref.downloadUrl.await().toString()
+                    if (url != "") {
+                        downloadUrl = url
+                        KeepsyLogger.i("FirebaseService: Verified link available on attempt $attempt")
+                        break
+                    }
+                } catch (e: Exception) {
+                    KeepsyLogger.w("FirebaseService: Polling for server link... ($attempt/25)")
+                }
+            }
+            
+            return downloadUrl ?: throw Exception("Object stored but link generation timed out.")
+        } catch (e: Exception) {
+            KeepsyLogger.e("FirebaseService: Critical Upload Error - ${e.message}", e)
+            throw e
+        }
     }
 
     suspend fun deleteProfilePicture() {
